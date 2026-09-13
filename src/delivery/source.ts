@@ -68,10 +68,10 @@ function oneAsset(assets: readonly Asset[], name: string): Asset | undefined {
 }
 
 function scopedCoordinates(tag: string): Readonly<{ name: string; version: string }> | undefined {
-  if (!tag.startsWith("workflow-package/")) return undefined;
+  if (!tag.startsWith("crystra-workflow-package/")) return undefined;
   const marker = tag.lastIndexOf("/v");
-  if (marker <= "workflow-package/".length) return undefined;
-  const name = tag.slice("workflow-package/".length, marker);
+  if (marker <= "crystra-workflow-package/".length) return undefined;
+  const name = tag.slice("crystra-workflow-package/".length, marker);
   const version = tag.slice(marker + 2);
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(name) && isExactWorkflowVersion(version)
     ? Object.freeze({ name, version })
@@ -104,7 +104,7 @@ type ScopedMetadata = Readonly<{
 function scopedDescriptor(record: PackageRecord, body: Uint8Array): ScopedMetadata | undefined {
   const descriptor = json(body);
   if (descriptor === undefined
-    || descriptor.tag !== `workflow-package/${record.name}/v${record.version}`
+    || descriptor.tag !== `crystra-workflow-package/${record.name}/v${record.version}`
     || descriptor.schemaVersion !== "workflow-package.package-release@2.0.0"
     || !exactKeys(descriptor, ["schemaVersion", "tag", "package", "archive", "checksum", "provenance", "contract"])) return undefined;
   const packageValue = descriptor.package as Record<string, unknown> | null;

@@ -1,12 +1,12 @@
 {
   "schemaVersion": "crystra.execution-development-inputs@1.0.0",
   "contracts": {
-    "repository": "firestige/wsr-contracts",
+    "repository": "firestige/crystra-contracts",
     "revision": "f2d373a1eaea945dc8ca0b9a66ff383f2b0117ce",
     "path": ".crystra-inputs/contracts"
   },
   "workflow": {
-    "repository": "firestige/wsr-workflow-package",
+    "repository": "firestige/crystra-workflow-package",
     "revision": "14ceea87f08ee4e468b2782c9beecfd5c136fe65",
     "path": ".crystra-inputs/workflow-package"
   }

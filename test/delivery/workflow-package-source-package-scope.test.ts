@@ -33,7 +33,7 @@ function packageRelease(spec: PackageSpec) {
   });
   const descriptor = bytes({
     schemaVersion: "workflow-package.package-release@2.0.0",
-    tag: `workflow-package/${spec.name}/v${spec.version}`,
+    tag: `crystra-workflow-package/${spec.name}/v${spec.version}`,
     package: { name: spec.name, version: spec.version, digest: `sha256:${"c".repeat(64)}` },
     archive: { name: `${prefix}.tar.gz`, sha256: sha256(archive), bytes: archive.byteLength },
     checksum: { name: `${prefix}.tar.gz.sha256` },
@@ -45,7 +45,7 @@ function packageRelease(spec: PackageSpec) {
   });
   return {
     release: {
-      tag_name: `workflow-package/${spec.name}/v${spec.version}`,
+      tag_name: `crystra-workflow-package/${spec.name}/v${spec.version}`,
       draft: spec.draft ?? false,
       prerelease: spec.prerelease ?? false,
       assets: [
@@ -109,11 +109,11 @@ describe("package-scoped GitHub Workflow Source", () => {
     const target = packageRelease({ name: "demo", version: "2.0.0" });
     const unrelated = [
       {
-        tag_name: "workflow-package/demo/v1.9.0-rc.1", draft: false, prerelease: false,
+        tag_name: "crystra-workflow-package/demo/v1.9.0-rc.1", draft: false, prerelease: false,
         assets: [],
       },
       {
-        tag_name: "workflow-package/demo/v1.0.0", draft: false, prerelease: false,
+        tag_name: "crystra-workflow-package/demo/v1.0.0", draft: false, prerelease: false,
         assets: [
           { name: "workflow-package-demo-1.0.0.tar.gz", browser_download_url: "https://example.test/legacy-archive" },
           { name: "workflow-package-demo-1.0.0.json", browser_download_url: "https://example.test/legacy-descriptor" },
@@ -121,7 +121,7 @@ describe("package-scoped GitHub Workflow Source", () => {
         ],
       },
       {
-        tag_name: "workflow-package/demo/v1.5.0", draft: false, prerelease: false,
+        tag_name: "crystra-workflow-package/demo/v1.5.0", draft: false, prerelease: false,
         assets: [
           { name: "workflow-package-demo-1.5.0.tar.gz", browser_download_url: "not-a-url" },
         ],

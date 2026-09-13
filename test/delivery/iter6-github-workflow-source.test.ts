@@ -40,7 +40,7 @@ function fixture(overrides: Readonly<{
   });
   const descriptor = body({
     schemaVersion: "workflow-package.package-release@2.0.0",
-    tag: "workflow-package/demo/v1.2.3",
+    tag: "crystra-workflow-package/demo/v1.2.3",
     package: { name: "demo", version: "1.2.3", digest: `sha256:${"c".repeat(64)}` },
     archive: { name: archiveName, sha256: digest(archive), bytes: archive.byteLength },
     checksum: overrides.descriptorChecksumObject === false ? null : { name: overrides.descriptorChecksumName ?? checksumName },
@@ -51,7 +51,7 @@ function fixture(overrides: Readonly<{
     },
   });
   const releases = body([{
-    tag_name: "workflow-package/demo/v1.2.3", draft: false, prerelease: false,
+    tag_name: "crystra-workflow-package/demo/v1.2.3", draft: false, prerelease: false,
     assets: [
       { name: archiveName, browser_download_url: urls.archive },
       { name: descriptorName, browser_download_url: urls.descriptor },
@@ -129,7 +129,7 @@ describe("Iter6 official GitHub Workflow Package source", () => {
     const v1Scoped = new GitHubWorkflowPackageSource(configuration, Object.freeze({
       request: async (url: string) => url.includes("?per_page=")
         ? { status: 200, body: body([{
-          tag_name: "workflow-package/demo/v1.2.3", draft: false, prerelease: false,
+          tag_name: "crystra-workflow-package/demo/v1.2.3", draft: false, prerelease: false,
           assets: [
             { name: "workflow-package-demo-1.2.3.tar.gz", browser_download_url: "https://example.test/archive" },
             { name: "workflow-package-demo-1.2.3.json", browser_download_url: "https://example.test/descriptor" },
@@ -138,7 +138,7 @@ describe("Iter6 official GitHub Workflow Package source", () => {
         }]) }
         : { status: 200, body: body({
           schemaVersion: "workflow-package.package-release@1.0.0", revision: "a".repeat(40),
-          tag: "workflow-package/demo/v1.2.3",
+          tag: "crystra-workflow-package/demo/v1.2.3",
           package: { name: "demo", version: "1.2.3", digest: `sha256:${"b".repeat(64)}` },
           archive: { name: "workflow-package-demo-1.2.3.tar.gz", sha256: `sha256:${"c".repeat(64)}`, bytes: 7 },
           checksum: { name: "workflow-package-demo-1.2.3.tar.gz.sha256" },

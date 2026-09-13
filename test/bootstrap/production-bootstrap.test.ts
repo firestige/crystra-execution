@@ -95,7 +95,7 @@ function scopedReleaseNetworkV2(archive: Uint8Array, packageDigest: string, name
   const provenanceDigest = `sha256:${createHash("sha256").update(provenance).digest("hex")}`;
   const descriptor = Buffer.from(JSON.stringify({
     schemaVersion: "workflow-package.package-release@2.0.0",
-    tag: `workflow-package/${name}/v${version}`,
+    tag: `crystra-workflow-package/${name}/v${version}`,
     package: { name, version, digest: packageDigest },
     archive: { name: archiveName, sha256: archiveDigest, bytes: archive.byteLength },
     checksum: { name: checksumName },
@@ -110,7 +110,7 @@ function scopedReleaseNetworkV2(archive: Uint8Array, packageDigest: string, name
   ]);
   return async (url: string) => {
     if (url.includes("/releases?per_page=100&page=1")) return Object.freeze({ status: 200, body: Buffer.from(JSON.stringify([{
-      tag_name: `workflow-package/${name}/v${version}`, draft: false, prerelease: false,
+      tag_name: `crystra-workflow-package/${name}/v${version}`, draft: false, prerelease: false,
       assets: [archiveName, descriptorName, checksumName, provenanceName].map((assetName) => ({ name: assetName, browser_download_url: `${base}/${assetName}` })),
     }])) });
     const body = responses.get(url);

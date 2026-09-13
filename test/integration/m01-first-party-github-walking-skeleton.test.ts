@@ -90,7 +90,7 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
     }, Object.freeze({ request: async (url: string) => {
       sourceCalls.push(url);
       if (url.includes("/releases?per_page=100&page=1")) return { status: 200, body: Buffer.from(JSON.stringify([{
-        tag_name: `workflow-package/implementation-workflow/v${implementationVersion}`, draft: false, prerelease: false,
+        tag_name: `crystra-workflow-package/implementation-workflow/v${implementationVersion}`, draft: false, prerelease: false,
         assets: [
           { name: path.basename(archivePath), browser_download_url: assetUrl },
           { name: descriptorName, browser_download_url: descriptorUrl },
@@ -100,7 +100,7 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
       }])) };
       if (url === descriptorUrl) return { status: 200, body: Buffer.from(JSON.stringify({
         schemaVersion: "workflow-package.package-release@2.0.0",
-        tag: `workflow-package/implementation-workflow/v${implementationVersion}`,
+        tag: `crystra-workflow-package/implementation-workflow/v${implementationVersion}`,
         package: { name: "implementation-workflow", version: implementationVersion, digest: packageDocument.package.digest },
         archive: { name: path.basename(archivePath), sha256: archiveDigest, bytes: archive.byteLength },
         checksum: { name: `${archiveName}.sha256` },
