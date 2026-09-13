@@ -42,7 +42,7 @@ describe("DSH profile installation policy", () => {
 
   it("binds every locator for the qualified package, including a direct tarball URL, to the local archive", async () => {
     const profile = await mkdtemp(path.join(tmpdir(), "dsh-profile-candidate-"));
-    const archive = path.join(profile, "wsr-execution-0.1.3.tgz");
+    const archive = path.join(profile, "crystra-execution-0.1.3.tgz");
     try {
       await writeFile(path.join(profile, "pnpm-workspace.yaml"), [
         "packages:",
@@ -52,12 +52,12 @@ describe("DSH profile installation policy", () => {
         "",
       ].join("\n"), "utf8");
 
-      await bindLocalPackageCandidate(profile, "wsr-execution", "0.1.3", archive);
+      await bindLocalPackageCandidate(profile, "crystra-execution", "0.1.3", archive);
 
       const workspace = parse(await readFile(path.join(profile, "pnpm-workspace.yaml"), "utf8"));
       expect(workspace.overrides).toEqual({
         "existing@1.0.0": "file:/existing.tgz",
-        "wsr-execution": `file:${archive}`,
+        "crystra-execution": `file:${archive}`,
       });
     } finally {
       await rm(profile, { recursive: true, force: true });
@@ -65,7 +65,7 @@ describe("DSH profile installation policy", () => {
   });
 
   it("fails closed for non-absolute paths, empty coordinates, and invalid overrides", async () => {
-    await expect(bindLocalPackageCandidate("relative", "wsr-execution", "0.1.3", "relative.tgz"))
+    await expect(bindLocalPackageCandidate("relative", "crystra-execution", "0.1.3", "relative.tgz"))
       .rejects.toThrow("DSH_LOCAL_CANDIDATE_PATH_NOT_ABSOLUTE");
     await expect(bindLocalPackageCandidate(tmpdir(), "", "0.1.3", path.join(tmpdir(), "core.tgz")))
       .rejects.toThrow("DSH_LOCAL_CANDIDATE_COORDINATE_INVALID");
@@ -75,7 +75,7 @@ describe("DSH profile installation policy", () => {
       await writeFile(path.join(profile, "pnpm-workspace.yaml"), "packages:\n  - .\noverrides: invalid\n", "utf8");
       await expect(bindLocalPackageCandidate(
         profile,
-        "wsr-execution",
+        "crystra-execution",
         "0.1.3",
         path.join(profile, "core.tgz"),
       )).rejects.toThrow("DSH_LOCAL_CANDIDATE_OVERRIDES_INVALID");

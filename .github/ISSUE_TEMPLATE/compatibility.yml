@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         ## 版本联动 / Version lock
-        DSH bundle 由 `firestige/wsr-dsh` 独立发布，并锁定兼容的 `wsr-execution`。请按 bundle 的 compatibility matrix 升级。
+        DSH bundle 由 `firestige/crystra-dsh` 独立发布，并锁定兼容的 `crystra-execution`。请按 bundle 的 compatibility matrix 升级。
   - type: input
     id: dsh_version
     attributes:
@@ -27,8 +27,8 @@ body:
     id: package_versions
     attributes:
       label: Installed versions / 已装版本
-      description: `npm view wsr-execution version` 与 `npm view dsh-wsr-execution version`
-      placeholder: "wsr-execution: 0.1.4 / dsh-wsr-execution: 0.1.0"
+      description: 填写已安装插件版本与所引用的 Execution GitHub Release tag
+      placeholder: "crystra-execution: 0.1.0 / dsh-crystra: 0.1.0"
     validations:
       required: true
   - type: textarea

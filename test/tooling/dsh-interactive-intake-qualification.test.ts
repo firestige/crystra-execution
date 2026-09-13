@@ -13,13 +13,13 @@ function pack(source: string, destination: string): string {
   const output = execFileSync("npm", ["pack", "--silent", "--pack-destination", destination], {
     cwd: source,
     encoding: "utf8",
-    env: { ...process.env, WSR_RELEASE_PACK_MODE: "verified-builder" },
+    env: { ...process.env, CRYSTRA_RELEASE_PACK_MODE: "verified-builder" },
   }).trim();
   return path.join(destination, output.split("\n").at(-1)!);
 }
 
 describe("DSH interactive Intake qualification", () => {
-  it("accepts /wsr from a real Web session and returns a user-visible command result", async () => {
+  it("accepts /crystra from a real Web session and returns a user-visible command result", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "execution-dsh-interactive-"));
     const release = path.join(root, "release");
     try {
@@ -29,11 +29,11 @@ describe("DSH interactive Intake qualification", () => {
       const pluginArchive = pack(path.join(repository, "packages/dsh-intake"), release);
       await expect(qualifyDshInteractiveIntake({ coreArchive, pluginArchive }))
         .resolves.toMatchObject({
-          command: "/wsr list",
+          command: "/crystra list",
           result: "PASS",
           oracle: "browser-dom",
-          presentation: { version: "wsr.presentation@1.0.0", kind: "delivery-list", itemCount: 0 },
-          errorPresentation: { version: "wsr.presentation@1.0.0", kind: "error", code: "DELIVERY_UNKNOWN" },
+          presentation: { version: "crystra.presentation@1.0.0", kind: "delivery-list", itemCount: 0 },
+          errorPresentation: { version: "crystra.presentation@1.0.0", kind: "error", code: "DELIVERY_UNKNOWN" },
           sessionSwitch: "PASS",
         });
     } finally {

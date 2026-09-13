@@ -1,7 +1,7 @@
 import { mkdir, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { createPluginRuntime, parseWsrCommand } from "../../packages/dsh-intake/src/index.js";
+import { createPluginRuntime, parseCrystraCommand } from "../../packages/dsh-intake/src/index.js";
 
 const root = path.resolve(process.argv[2]);
 const worktreeSpelling = path.join(root, "worktree");
@@ -39,8 +39,8 @@ const runtime = await createPluginRuntime({ configFile: path.join(root, "executi
 });
 await runtime.invokeForSession({
   sessionKey: "session-signal", agent: { id: "session-signal" },
-  operation: parseWsrCommand("create fixture@1.0.0\nwait"),
-  turnText: "/wsr create fixture@1.0.0\nwait", images: [],
+  operation: parseCrystraCommand("create fixture@1.0.0\nwait"),
+  turnText: "/crystra create fixture@1.0.0\nwait", images: [],
 });
 
 const keepAlive = setInterval(() => undefined, 1_000);

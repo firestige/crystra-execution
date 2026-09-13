@@ -3,7 +3,7 @@ import { readFile, readdir, realpath, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { IntakeSessionBindingRepository } from "./binding-repository.js";
-import { parseWsrCommand } from "./command.js";
+import { parseCrystraCommand } from "./command.js";
 
 export const name = "workflow-execution";
 export const inject = ["commands", "tools", "attachments", "agents", "workspaceRegistry"];
@@ -110,7 +110,7 @@ export function recordConsumedActionReply(agent, message) {
   agent.session.append("user/message", message, { surfaceOp: "append" });
 }
 
-const PRESENTATION_VERSION = "wsr.presentation@1.0.0";
+const PRESENTATION_VERSION = "crystra.presentation@1.0.0";
 const PRESENTATION_KINDS = new Set(["command-accepted", "delivery-running", "delivery-list", "delivery-status", "action-output", "action-input-request", "terminal-result", "error"]);
 
 function boundedPresentation(presentation) {
@@ -123,7 +123,7 @@ function boundedPresentation(presentation) {
     schemaVersion: PRESENTATION_VERSION,
     correlation: "presentation-invalid",
     kind: "error",
-    data: Object.freeze({ code: "WSR_PRESENTATION_INVALID", message: "WSR_PRESENTATION_INVALID" }),
+    data: Object.freeze({ code: "CRYSTRA_PRESENTATION_INVALID", message: "CRYSTRA_PRESENTATION_INVALID" }),
   });
   const text = JSON.stringify(safe);
   if (Buffer.byteLength(text, "utf8") <= 4096) return text;
@@ -139,7 +139,7 @@ export function presentToDshSession(agent, presentation, createId = () => `cmd-w
   const commandId = createId();
   agent.session.append("command/run", {
     commandId,
-    name: "wsr",
+    name: "crystra",
     source: { kind: "plugin", plugin: "workflow-execution" },
   });
   agent.session.append("command/done", { commandId, kind: presentation?.kind === "error" ? "error" : "success", text });
@@ -185,7 +185,7 @@ export function presentationForDshOperation(api, correlation, operation, result,
 
 export async function createPluginRuntime(config, options = {}) {
   const admitted = profile(config);
-  const api = await (options.moduleLoader?.() ?? import("wsr-execution"));
+  const api = await (options.moduleLoader?.() ?? import("crystra-execution"));
   const attachmentBytes = new Map();
   const bindings = options.bindings ?? new IntakeSessionBindingRepository(admitted.bindingFile);
   const sessionByCorrelation = new Map();
@@ -357,7 +357,7 @@ export async function createPluginRuntime(config, options = {}) {
       return service.invoke(Object.freeze({ operation: "action-finish", ...(operation.remainder === undefined && attachments.length === 0 ? {} : { turn: Object.freeze({ text: operation.remainder ?? "", attachments }) }), correlation: existing.correlation }));
     }
     const deliveryId = operation.deliveryId ?? existing?.deliveryId;
-    if (deliveryId === undefined) return error("WSR_COMMAND_INVALID");
+    if (deliveryId === undefined) return error("CRYSTRA_COMMAND_INVALID");
     const result = await service.invoke(Object.freeze({ operation: "abandon", deliveryId, correlation }));
     if (result.kind === "TERMINAL") {
       const detached = await bindings.byDelivery(deliveryId);
@@ -394,10 +394,10 @@ export async function createPluginRuntime(config, options = {}) {
 
 function commandTurn(rawInput) {
   const normalized = rawInput.startsWith(" ") ? rawInput.slice(1) : rawInput;
-  return `/wsr ${normalized}`;
+  return `/crystra ${normalized}`;
 }
 
-export async function recordWsrCommandInput(agent, rawInput, attachments = [], createId = () => `message-workflow-execution-${randomUUID()}`) {
+export async function recordCrystraCommandInput(agent, rawInput, attachments = [], createId = () => `message-workflow-execution-${randomUUID()}`) {
   if (agent === null || typeof agent !== "object" || typeof agent.followup !== "function" || typeof agent.whenIdle !== "function"
     || typeof rawInput !== "string" || !Array.isArray(attachments) || typeof createId !== "function") {
     throw new TypeError("DSH_INTAKE_USER_INPUT_INVALID");
@@ -405,7 +405,7 @@ export async function recordWsrCommandInput(agent, rawInput, attachments = [], c
   const message = Object.freeze({
     id: createId(),
     role: "user",
-    source: Object.freeze({ kind: "user", workflowCommand: "wsr" }),
+    source: Object.freeze({ kind: "user", workflowCommand: "crystra" }),
     content: Object.freeze([
       Object.freeze({ type: "text", text: commandTurn(rawInput) }),
       ...attachments,
@@ -439,7 +439,7 @@ export async function apply(ctx, config) {
   const attachmentStore = ctx.attachments;
   const run = (task) => { active.add(task); void task.finally(() => active.delete(task)).catch(() => undefined); return task; };
   const command = ctx.commands.register({
-    name: "wsr",
+    name: "crystra",
     description: "Create, list, recover, inspect, finish, or abandon a Workflow Delivery",
     input: { hint: "list | create <selector> | recover [delivery-id] | status [delivery-id] | action finish | abandon [delivery-id]", images: true },
     recordInput: true,
@@ -447,21 +447,21 @@ export async function apply(ctx, config) {
       return run((async () => {
         let query = false;
         try {
-          const operation = parseWsrCommand(invocation.rawInput);
+          const operation = parseCrystraCommand(invocation.rawInput);
           if (["create", "recover"].includes(operation.operation)) {
             presentationRouter.retain(String(invocation.agent.id), invocation.agent);
           }
           query = operation.operation === "list" || operation.operation === "status";
-          const { createIntakePresentation, presentationForIntakeResult, serializeIntakePresentation } = await import("wsr-execution");
+          const { createIntakePresentation, presentationForIntakeResult, serializeIntakePresentation } = await import("crystra-execution");
           if (!query) {
-            await recordWsrCommandInput(invocation.agent, invocation.rawInput, invocation.attachments);
+            await recordCrystraCommandInput(invocation.agent, invocation.rawInput, invocation.attachments);
             presentToDshSession(invocation.agent, createIntakePresentation(
               String(invocation.commandId), "command-accepted", {},
             ));
           }
           if (invocation.attachments.length > 0 && !["create", "action-finish"].includes(operation.operation)) {
             const presentation = createIntakePresentation(
-              `presentation-${randomUUID()}`, "error", { code: "WSR_COMMAND_INVALID", message: "WSR_COMMAND_INVALID" },
+              `presentation-${randomUUID()}`, "error", { code: "CRYSTRA_COMMAND_INVALID", message: "CRYSTRA_COMMAND_INVALID" },
             );
             if (!query) presentToDshSession(invocation.agent, presentation);
             return { kind: "error", text: serializeIntakePresentation(presentation, 4096) };
@@ -474,9 +474,9 @@ export async function apply(ctx, config) {
           if (!query) presentToDshSession(invocation.agent, presentation);
           return { kind: result.kind === "ERROR" ? "error" : "success", text: serializeIntakePresentation(presentation, 4096) };
         } catch (cause) {
-          const { createIntakePresentation, serializeIntakePresentation } = await import("wsr-execution");
+          const { createIntakePresentation, serializeIntakePresentation } = await import("crystra-execution");
           const code = typeof cause?.code === "string" ? cause.code : "DSH_INTAKE_FAILED";
-          const message = code === "WSR_COMMAND_INVALID" && typeof cause?.message === "string" ? cause.message : code;
+          const message = code === "CRYSTRA_COMMAND_INVALID" && typeof cause?.message === "string" ? cause.message : code;
           const presentation = createIntakePresentation(`presentation-${randomUUID()}`, "error", { code, message });
           if (!query) presentToDshSession(invocation.agent, presentation);
           return { kind: "error", text: serializeIntakePresentation(presentation, 4096) };
@@ -500,7 +500,7 @@ export async function apply(ctx, config) {
         if (["create", "recover"].includes(operation.operation) && !["START_UNCERTAIN", "RECOVERY"].includes(result.kind)) {
           presentationRouter.release(String(agent.id));
         }
-        const { createIntakePresentation, presentationForIntakeResult, serializeIntakePresentation } = await import("wsr-execution");
+        const { createIntakePresentation, presentationForIntakeResult, serializeIntakePresentation } = await import("crystra-execution");
         return { result: serializeIntakePresentation(presentationForDshOperation(
           { createIntakePresentation, presentationForIntakeResult }, `presentation-${randomUUID()}`, operation, result, 4096,
         ), 4096) };
@@ -508,7 +508,7 @@ export async function apply(ctx, config) {
   }));
   const preStep = ctx.on?.("agent/pre-step", async (payload, next) => {
     const messages = payload.messages.filter((message) => message.source?.kind === "user");
-    const command = messages.find((message) => message.source?.workflowCommand === "wsr");
+    const command = messages.find((message) => message.source?.workflowCommand === "crystra");
     if (command !== undefined) {
       recordConsumedActionReply(payload.agent, command);
       return { kind: "reject" };

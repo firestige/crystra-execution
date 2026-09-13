@@ -42,7 +42,7 @@ export function renderReleaseNotes(version: string, compatibility: Compatibility
 }> {
   const section = currentChangelogSection(version, changelog);
   const notes = [
-    `# WSR Execution ${version}`,
+    `# Crystra Execution ${version}`,
     "",
     "## What's new",
     "",
@@ -54,14 +54,14 @@ export function renderReleaseNotes(version: string, compatibility: Compatibility
     "",
     "## Upgrade guide",
     "",
-    `Install \`wsr-execution@${version}\` for host-neutral embedding. For DSH, install the independently versioned \`dsh-wsr-execution\` bundle from \`firestige/wsr-dsh\`.`,
+    `For host-neutral embedding, install the exact GitHub Release tarball \`crystra-execution-${version}.tgz\`. For DSH, use the single \`dsh-crystra\` plugin from \`firestige/crystra-dsh\`. This is a fresh Crystra installation; old WSR data and artifacts are not migrated.`,
     "",
   ].join("\n");
   return Object.freeze({ notes, changelogSectionSha256: sha256(section) });
 }
 
 export function assertReleaseNotes(notes: string, version: string): void {
-  if (!notes.startsWith(`# WSR Execution ${version}\n`)) throw new Error("RELEASE_NOTES_VERSION_MISMATCH");
+  if (!notes.startsWith(`# Crystra Execution ${version}\n`)) throw new Error("RELEASE_NOTES_VERSION_MISMATCH");
   for (const heading of REQUIRED) {
     if (!notes.includes(`\n## ${heading}\n`)) throw new Error("RELEASE_NOTES_SECTION_MISSING");
   }

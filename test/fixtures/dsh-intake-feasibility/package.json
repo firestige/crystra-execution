@@ -1,5 +1,5 @@
 {
-  "name": "@workflow-self-recursive/dsh-intake-feasibility",
+  "name": "@crystra/dsh-intake-feasibility",
   "version": "0.0.0-feasibility",
   "private": true,
   "type": "module",

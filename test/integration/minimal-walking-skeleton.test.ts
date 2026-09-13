@@ -20,8 +20,8 @@ import {
 const roots: string[] = [];
 const servers: Server[] = [];
 const minimalCorpus = path.join(
-  path.dirname(fileURLToPath(new URL("../..", import.meta.url))),
-  "system-contracts/workflow-dsl-2-candidate/generated/examples/minimal",
+  path.join(fileURLToPath(new URL("../../", import.meta.url)), ".crystra-inputs"),
+  "contracts/workflow-dsl-2-candidate/generated/examples/minimal",
 );
 
 afterEach(async () => {

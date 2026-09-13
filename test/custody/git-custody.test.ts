@@ -163,7 +163,7 @@ describe("Git custody", () => {
     expect(() => git(f.repository, "show", "refs/heads/dirty-published:ignored.log")).toThrow();
   });
 
-  it("returns a stable capacity diagnostic and cleans failed WSR-owned snapshot objects", async () => {
+  it("returns a stable capacity diagnostic and cleans failed Crystra-owned snapshot objects", async () => {
     const f = fixture();
     const custody = createGitCustody({
       recordsDirectory: f.records as AbsolutePath,

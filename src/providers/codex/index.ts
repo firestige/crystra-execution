@@ -339,7 +339,7 @@ async function captureBinding(
       manifestBindingIdentity: request.dispatch.episode?.thread?.delivery?.manifestBindingIdentity ?? null,
       sessionCompatibilityIdentity: request.dispatch.session?.sessionCompatibilityIdentity ?? null,
     }),
-    prompt: `${instructions}\n\n<wsr-admitted-action>${JSON.stringify(projection)}</wsr-admitted-action>`,
+    prompt: `${instructions}\n\n<crystra-admitted-action>${JSON.stringify(projection)}</crystra-admitted-action>`,
     resultSchema: codexOutputSchema(dispatch.action.resultSchema as FrozenJsonValue),
   });
 }
@@ -448,7 +448,7 @@ class CodexCliSession implements NativeProviderSession {
     try {
       const outcome = await execute(this.#configuration.executablePath, args, {
         cwd: this.#worktree,
-        input: `${this.#binding.prompt}\n\n<wsr-turn-input>${JSON.stringify(input)}</wsr-turn-input>`,
+        input: `${this.#binding.prompt}\n\n<crystra-turn-input>${JSON.stringify(input)}</crystra-turn-input>`,
         timeoutMs: this.#configuration.executionTimeoutMs,
         shutdownTimeoutMs: this.#configuration.shutdownTimeoutMs,
         signal: AbortSignal.any([this.#signal, this.#lifecycle.signal]),

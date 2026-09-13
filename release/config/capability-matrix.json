@@ -1,32 +1,32 @@
 {
-  "schemaVersion": "wsr.release-capability-matrix@1.0.0",
+  "schemaVersion": "crystra.release-capability-matrix@1.0.0",
   "components": [
     {
-      "repository": "firestige/wsr-execution",
+      "repository": "firestige/crystra-execution",
       "assetMode": "npm-package",
       "publisherAdapter": "npm-package+github-release",
       "releaseMode": "active"
     },
     {
-      "repository": "firestige/wsr-evidence",
+      "repository": "firestige/crystra-evidence",
       "assetMode": "python-wheel-sdist+oci",
       "publisherAdapter": "python-github-release+ghcr",
       "releaseMode": "active"
     },
     {
-      "repository": "firestige/wsr-contracts",
+      "repository": "firestige/crystra-contracts",
       "assetMode": "contract-publication-records",
       "publisherAdapter": "contract-publication+github-release",
       "releaseMode": "active"
     },
     {
-      "repository": "firestige/wsr-workflow-package",
+      "repository": "firestige/crystra-workflow-package",
       "assetMode": "workflow-assets",
       "publisherAdapter": "workflow-assets+github-release",
       "releaseMode": "active"
     },
     {
-      "repository": "firestige/wsr-evolution",
+      "repository": "firestige/crystra-evolution",
       "assetMode": "implementation-language-selected",
       "publisherAdapter": "implementation-language-selected",
       "releaseMode": "parameter-only"

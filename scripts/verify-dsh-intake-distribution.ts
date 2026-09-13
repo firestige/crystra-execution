@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const PACKAGE_NAME = "wsr-dsh-intake";
+const PACKAGE_NAME = "crystra-execution-intake-internal";
 const SKILL_NAME = "workflow-execution";
 const TOOL_IDENTITY = "workflow_execution_intake";
 const PRESENTATION_SLOT = "conversation.chat.commandview";
@@ -64,7 +64,7 @@ export async function verifyDshIntakeDistribution(directory: string): Promise<Re
   }
 
   const patch = await requiredText(path.join(root, "cordis.patch.yml"), "DSH_INTAKE_PROVIDER_INVALID");
-  if (!/id: workflow-execution[\s\S]*name: ['"]wsr-dsh-intake['"]/u.test(patch)
+  if (!/id: workflow-execution[\s\S]*name: ['"]crystra-execution-intake-internal['"]/u.test(patch)
     || !/id: skill-filesystem[\s\S]*customSkillDirs:/u.test(patch)
     || !/id: tool-skill\s+disabled: false/u.test(patch)) {
     throw new DshIntakeDistributionVerificationError("DSH_INTAKE_PROVIDER_INVALID");
@@ -89,9 +89,9 @@ export async function verifyDshIntakeDistribution(directory: string): Promise<Re
   }
 
   const client = await requiredText(path.join(root, "lib/client.js"), "DSH_INTAKE_CLIENT_INVALID");
-  if (!client.includes(PRESENTATION_SLOT) || !client.includes(SIDEBAR_SLOT) || !client.includes('key: "wsr"')
-    || !client.includes('"data-wsr-presentation"') || !client.includes('"data-wsr-version"')
-    || !client.includes('"data-wsr-kind"') || !client.includes("WSR_PRESENTATION_INVALID")) {
+  if (!client.includes(PRESENTATION_SLOT) || !client.includes(SIDEBAR_SLOT) || !client.includes('key: "crystra"')
+    || !client.includes('"data-crystra-presentation"') || !client.includes('"data-crystra-version"')
+    || !client.includes('"data-crystra-kind"') || !client.includes("CRYSTRA_PRESENTATION_INVALID")) {
     throw new DshIntakeDistributionVerificationError("DSH_INTAKE_CLIENT_INVALID");
   }
 

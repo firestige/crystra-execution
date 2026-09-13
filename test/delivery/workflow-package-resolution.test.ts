@@ -20,8 +20,8 @@ import {
   WorkflowPackageStoreError,
 } from "../../src/delivery/index.js";
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const minimalDefinition = join(repositoryRoot, "system-contracts/workflow-dsl-2-candidate/generated/examples/minimal");
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..", ".crystra-inputs");
+const minimalDefinition = join(repositoryRoot, "contracts/workflow-dsl-2-candidate/generated/examples/minimal");
 const implementationPackage = join(repositoryRoot, "workflow-package/implementation");
 const systemDesignPackage = join(repositoryRoot, "workflow-package/system-design");
 

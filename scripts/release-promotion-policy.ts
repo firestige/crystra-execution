@@ -18,7 +18,7 @@ export function assertPrereleaseCandidate(candidateTag: string, packageVersion: 
   if (!/-(?:rc)\.(?:0|[1-9]\d*)$/u.test(candidateTag)) {
     throw new ReleasePromotionPolicyError("PRERELEASE_TAG_REQUIRED");
   }
-  if (!candidateTag.startsWith(`${packageVersion}-`)) {
+  if (!candidateTag.startsWith(`crystra-execution-v${packageVersion}-`)) {
     throw new ReleasePromotionPolicyError("PRERELEASE_VERSION_MISMATCH");
   }
 }
@@ -40,7 +40,7 @@ export function assertFinalPromotionEligible(
   actualArtifactMetadataSha256?: string,
   expectedCandidateTag?: string,
 ): void {
-  if (!STABLE_VERSION.test(finalTag) || finalTag !== evidence.packageVersion) {
+  if (finalTag !== `crystra-execution-v${evidence.packageVersion}` || !STABLE_VERSION.test(evidence.packageVersion)) {
     throw new ReleasePromotionPolicyError("FINAL_VERSION_MISMATCH");
   }
   assertPrereleaseCandidate(evidence.candidateTag, evidence.packageVersion);

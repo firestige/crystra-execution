@@ -64,7 +64,7 @@ function runtime(client: FakeClient, overrides: Partial<CopilotSdkRuntimeBinding
 }
 
 async function fixture(scenario: Scenario = "complete") {
-  const root = await mkdtemp(join(tmpdir(), "wsr-copilot-provider-")); temporaryDirectories.push(root);
+  const root = await mkdtemp(join(tmpdir(), "crystra-copilot-provider-")); temporaryDirectories.push(root);
   const workspacePath = join(root, "worktree"); const instructionsPath = join(root, "instructions.md");
   await mkdir(join(workspacePath, "src"), { recursive: true });
   const workspace = await realpath(workspacePath);

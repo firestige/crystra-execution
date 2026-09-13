@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  WSR_PRESENTATION_VERSION,
+  CRYSTRA_PRESENTATION_VERSION,
   actionOutputPresentation,
   createIntakePresentation,
   presentationForIntakeResult,
   serializeIntakePresentation,
 } from "../../src/index.js";
 
-describe("WSR host-neutral presentation contract", () => {
+describe("Crystra host-neutral presentation contract", () => {
   it("serializes each closed event kind in one versioned envelope", () => {
     const events = [
       createIntakePresentation("correlation-1", "command-accepted", { operation: "list" }),
@@ -21,7 +21,7 @@ describe("WSR host-neutral presentation contract", () => {
       createIntakePresentation("correlation-1", "error", { code: "DELIVERY_UNKNOWN", message: "DELIVERY_UNKNOWN" }),
     ];
 
-    expect(WSR_PRESENTATION_VERSION).toBe("wsr.presentation@1.0.0");
+    expect(CRYSTRA_PRESENTATION_VERSION).toBe("crystra.presentation@1.0.0");
     expect(events.map((event) => event.kind)).toEqual([
       "command-accepted", "delivery-running", "delivery-list", "delivery-status",
       "action-output", "action-input-request", "terminal-result", "error",
@@ -34,7 +34,7 @@ describe("WSR host-neutral presentation contract", () => {
 
   it("maps empty list, running, status, terminal, and error results without leaking extra fields", () => {
     expect(presentationForIntakeResult("correlation-1", { kind: "LIST", deliveries: [] }, 4096)).toMatchObject({
-      schemaVersion: "wsr.presentation@1.0.0", correlation: "correlation-1", kind: "delivery-list", data: { items: [] },
+      schemaVersion: "crystra.presentation@1.0.0", correlation: "correlation-1", kind: "delivery-list", data: { items: [] },
     });
     expect(presentationForIntakeResult("correlation-1", { kind: "START_UNCERTAIN", worktree: "/workspace", deliveryId: "delivery-1" }, 4096).kind)
       .toBe("delivery-running");
@@ -86,7 +86,7 @@ describe("WSR host-neutral presentation contract", () => {
     [{ type: "text", text: "single text block" }, "single text block"],
     [{ result: { greeting: "nested visible result" } }, "nested visible result"],
     [["first", { type: "text", text: "second" }, null], "first\n\nsecond"],
-    [{ type: "tool-call", name: "workflow_complete", arguments: "secret" }, "WSR content unavailable"],
+    [{ type: "tool-call", name: "workflow_complete", arguments: "secret" }, "Crystra content unavailable"],
   ])("normalizes Action output %j to public text", (content, expected) => {
     expect(actionOutputPresentation("correlation-1", content as never).data)
       .toEqual({ content: { text: expected } });
@@ -94,7 +94,7 @@ describe("WSR host-neutral presentation contract", () => {
 
   it.each(["", { type: "text", text: "" }])("never emits an empty public Action card for %j", (content) => {
     expect(actionOutputPresentation("correlation-1", content as never).data)
-      .toEqual({ content: { text: "WSR content unavailable" } });
+      .toEqual({ content: { text: "Crystra content unavailable" } });
   });
 
   it("fails closed to a bounded error when public presentation content exceeds its bound", () => {
@@ -104,7 +104,7 @@ describe("WSR host-neutral presentation contract", () => {
     const serialized = serializeIntakePresentation(event, 256);
     expect(Buffer.byteLength(serialized, "utf8")).toBeLessThanOrEqual(256);
     expect(JSON.parse(serialized)).toMatchObject({
-      schemaVersion: "wsr.presentation@1.0.0", correlation: "correlation-1", kind: "error", data: { code: "OUTPUT_TRUNCATED" },
+      schemaVersion: "crystra.presentation@1.0.0", correlation: "correlation-1", kind: "error", data: { code: "OUTPUT_TRUNCATED" },
     });
   });
 

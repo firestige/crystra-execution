@@ -28,7 +28,7 @@ function packageRelease(spec: PackageSpec) {
     schemaVersion: "workflow-package.provenance@1.0.0",
     subject: { name: `${prefix}.tar.gz`, sha256: sha256(archive) },
     source: { repository: "example/workflows", revision: "a".repeat(40) },
-    contract: { repository: "firestige/wsr-contracts", revision: "b".repeat(40) },
+    contract: { repository: "firestige/crystra-contracts", revision: "b".repeat(40) },
     builder: { workflow: ".github/workflows/release-candidate.yml" },
   });
   const descriptor = bytes({
@@ -39,7 +39,7 @@ function packageRelease(spec: PackageSpec) {
     checksum: { name: `${prefix}.tar.gz.sha256` },
     provenance: { name: `${prefix}.provenance.json`, sha256: sha256(provenance) },
     contract: {
-      repository: "firestige/wsr-contracts", revision: "b".repeat(40),
+      repository: "firestige/crystra-contracts", revision: "b".repeat(40),
       minVersion: "1.1.0", maxVersion: "1.1.0",
     },
   });

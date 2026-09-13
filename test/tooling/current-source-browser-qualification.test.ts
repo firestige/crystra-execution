@@ -40,7 +40,7 @@ describe("current-source browser qualification authority", () => {
     const source = await readFile(path.resolve(import.meta.dirname, "../../scripts/qualify-current-source-browser.ts"), "utf8");
 
     expect(source).toContain("parseCurrentSourceBrowserQualificationArguments(process.argv.slice(2))");
-    expect(source).toContain("/wsr create ${qualification.workflowSelector}");
-    expect(source).not.toContain("/wsr create hello-world-workflow@0.2.0");
+    expect(source).toContain("/crystra create ${qualification.workflowSelector}");
+    expect(source).not.toContain("/crystra create hello-world-workflow@0.2.0");
   });
 });

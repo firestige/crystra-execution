@@ -1,7 +1,7 @@
 import type { FrozenJsonValue } from "../contracts/index.js";
 import type { WorkflowIntakeResult } from "./workflow-intake-service.js";
 
-export const WSR_PRESENTATION_VERSION = "wsr.presentation@1.0.0" as const;
+export const CRYSTRA_PRESENTATION_VERSION = "crystra.presentation@1.0.0" as const;
 
 export type IntakePresentationKind =
   | "command-accepted"
@@ -14,7 +14,7 @@ export type IntakePresentationKind =
   | "error";
 
 export interface IntakePresentation {
-  readonly schemaVersion: typeof WSR_PRESENTATION_VERSION;
+  readonly schemaVersion: typeof CRYSTRA_PRESENTATION_VERSION;
   readonly correlation: string;
   readonly kind: IntakePresentationKind;
   readonly data: Readonly<Record<string, FrozenJsonValue>>;
@@ -52,7 +52,7 @@ export function createIntakePresentation(
 ): IntakePresentation {
   if (typeof correlation !== "string" || correlation.length === 0 || !KINDS.has(kind)
     || !validJson(data) || Array.isArray(data)) throw new TypeError("INTAKE_PRESENTATION_INVALID");
-  return deepFreeze({ schemaVersion: WSR_PRESENTATION_VERSION, correlation, kind, data });
+  return deepFreeze({ schemaVersion: CRYSTRA_PRESENTATION_VERSION, correlation, kind, data });
 }
 
 function truncated(correlation: string): IntakePresentation {
@@ -153,7 +153,7 @@ export function presentationForIntakeResult(
 export function actionOutputPresentation(correlation: string, content: FrozenJsonValue, label?: string): IntakePresentation {
   return createIntakePresentation(correlation, "action-output", {
     ...(label === undefined ? {} : { label }),
-    content: { text: visibleActionText(content) ?? "WSR content unavailable" },
+    content: { text: visibleActionText(content) ?? "Crystra content unavailable" },
   });
 }
 

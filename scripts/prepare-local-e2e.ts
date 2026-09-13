@@ -106,8 +106,8 @@ export async function prepareLocalE2E(
   return Object.freeze({
     version,
     releaseDirectory,
-    coreArchive: path.join(releaseDirectory, `wsr-execution-${version}.tgz`),
-    pluginArchive: path.join(releaseDirectory, `wsr-dsh-intake-${version}.tgz`),
+    coreArchive: path.join(releaseDirectory, `crystra-execution-${version}.tgz`),
+    pluginArchive: path.join(releaseDirectory, `crystra-execution-intake-internal-${version}.tgz`),
     configFile,
     stateDirectory,
   });
@@ -122,7 +122,7 @@ export async function resolveLocalE2EPreparationInput(executionRootValue: string
     executionRoot,
     worktree,
     releaseDirectory: path.join(worktree, "tmp/local-e2e/release"),
-    durableDirectory: path.resolve(worktree, "../wsr-local"),
+    durableDirectory: path.resolve(worktree, "../crystra-local"),
     packageVersion: packageManifest.version,
     defaults,
   });
@@ -208,8 +208,8 @@ export async function reconcileLocalE2EDshProfile(
   if (input.reinstallProfile === true) {
     await rm(resolveDshProfileModulesDirectory(dshHome, profile), { recursive: true, force: true });
   }
-  const corePackage = "wsr-execution";
-  const pluginPackage = "wsr-dsh-intake";
+  const corePackage = "crystra-execution";
+  const pluginPackage = "crystra-execution-intake-internal";
   const removePrefix = ["plugin", "--profile", profile, "remove", "--workspace-root"] as const;
   await ensureDshProfileInstallationPolicy(profile, (args) => run("dsh", args, worktree, dshHome));
   if (dependencies[pluginPackage] !== undefined) await run("dsh", [...removePrefix, pluginPackage], worktree, dshHome);

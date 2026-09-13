@@ -1,4 +1,4 @@
-# WSR Execution {{version}}
+# Crystra Execution {{version}}
 
 ## What's new
 

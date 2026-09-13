@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { verifyExecutionReleaseArtifacts } from "../../scripts/verify-release-artifacts.js";
 
 export type NpmArtifact = Readonly<{
-  package: "wsr-execution";
+  package: "crystra-execution";
   version: string;
   file: string;
   sha256: string;
@@ -20,13 +20,13 @@ export type RegistryVersion = Readonly<{
 }>;
 export type PublicationAction = Readonly<{
   action: "publish" | "skip-exact";
-  package: "wsr-execution";
+  package: "crystra-execution";
   file: string;
 }>;
 export type RegistryLookup = (name: string, version: string) => Promise<RegistryVersion | null>;
 
 function assertCoreArtifact(artifact: NpmArtifact): void {
-  if (artifact.package !== "wsr-execution" || artifact.file !== `wsr-execution-${artifact.version}.tgz`) {
+  if (artifact.package !== "crystra-execution" || artifact.file !== `crystra-execution-${artifact.version}.tgz`) {
     throw new Error("NPM_CORE_PUBLICATION_SET_INVALID");
   }
 }
@@ -48,7 +48,7 @@ export async function planNpmCorePublication(
 
 export async function verifyPublishedNpmCore(
   artifact: NpmArtifact, lookup: RegistryLookup,
-): Promise<Readonly<{ version: string; package: "wsr-execution" }>> {
+): Promise<Readonly<{ version: string; package: "crystra-execution" }>> {
   assertCoreArtifact(artifact);
   const published = await lookup(artifact.package, artifact.version);
   if (published === null) throw new Error("NPM_POSTPUBLISH_VERSION_MISSING");
@@ -64,7 +64,7 @@ export async function waitForPublishedNpmCore(
   lookup: RegistryLookup,
   delay: () => Promise<void> = () => new Promise((resolve) => setTimeout(resolve, 5_000)),
   attempts = 12,
-): Promise<Readonly<{ version: string; package: "wsr-execution" }>> {
+): Promise<Readonly<{ version: string; package: "crystra-execution" }>> {
   let failure: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
@@ -117,11 +117,11 @@ async function run(): Promise<void> {
   const metadata = JSON.parse(
     await readFile(path.join(directory, "release-metadata.json"), "utf8"),
   ) as { artifacts: readonly { name: string; sha256: string }[] };
-  const file = `wsr-execution-${verified.version}.tgz`;
+  const file = `crystra-execution-${verified.version}.tgz`;
   const bound = metadata.artifacts.find((candidate) => candidate.name === file);
   if (bound === undefined) throw new Error("NPM_CORE_PUBLICATION_SET_INVALID");
   const artifact: NpmArtifact = {
-    package: "wsr-execution", version: verified.version, file, sha256: bound.sha256,
+    package: "crystra-execution", version: verified.version, file, sha256: bound.sha256,
   };
   const plan = await planNpmCorePublication(artifact, registryLookup);
   if (execute && plan.action === "publish") {

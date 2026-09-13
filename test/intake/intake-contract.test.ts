@@ -35,8 +35,8 @@ describe("Wave 6 host-neutral Intake contract", () => {
 
     await command.invoke(Object.freeze({
       operation: "create", selector: "implementation-workflow@0.3.0", worktree: "/workspace",
-      directive: "/wsr create implementation-workflow@0.3.0",
-      turn: Object.freeze({ text: "/wsr create implementation-workflow@0.3.0\nimplement the task", attachments: Object.freeze([attachment]) }),
+      directive: "/crystra create implementation-workflow@0.3.0",
+      turn: Object.freeze({ text: "/crystra create implementation-workflow@0.3.0\nimplement the task", attachments: Object.freeze([attachment]) }),
       correlation: "session-safe-1",
     }));
     await tool.invoke(Object.freeze({
@@ -61,8 +61,8 @@ describe("Wave 6 host-neutral Intake contract", () => {
     await expect(service.invoke(Object.freeze({ operation: "resume", ctx: {} }) as never)).resolves.toMatchObject({ kind: "ERROR", code: "INTAKE_OPERATION_INVALID" });
     await expect(service.invoke(Object.freeze({
       operation: "create", selector: "implementation-workflow@0.3.0", worktree: "/workspace",
-      directive: "/wsr create implementation-workflow@0.3.0",
-      turn: Object.freeze({ text: "/wsr create implementation-workflow@0.3.0 task", attachments: Object.freeze([]), nativeSessionId: "secret" }),
+      directive: "/crystra create implementation-workflow@0.3.0",
+      turn: Object.freeze({ text: "/crystra create implementation-workflow@0.3.0 task", attachments: Object.freeze([]), nativeSessionId: "secret" }),
       correlation: "safe",
     }) as never)).resolves.toMatchObject({ kind: "ERROR", code: "INTAKE_OPERATION_INVALID" });
     expect(WorkflowIntakeService.operations).toEqual(["list", "create", "recover", "status", "action-finish", "abandon"]);
@@ -111,11 +111,11 @@ describe("Wave 6 host-neutral Intake contract", () => {
     const invalid: unknown[] = [
       null, [], Object.create({ operation: "list" }), { operation: "list", correlation: "" },
       { operation: "list", correlation: "c", extra: true },
-      { operation: "create", selector: 1, worktree: "/workspace", directive: "/wsr", turn: { text: "/wsr x", attachments: [] }, correlation: "c" },
-      { operation: "create", selector: "x", worktree: 1, directive: "/wsr", turn: { text: "/wsr x", attachments: [] }, correlation: "c" },
+      { operation: "create", selector: 1, worktree: "/workspace", directive: "/crystra", turn: { text: "/crystra x", attachments: [] }, correlation: "c" },
+      { operation: "create", selector: "x", worktree: 1, directive: "/crystra", turn: { text: "/crystra x", attachments: [] }, correlation: "c" },
       { operation: "create", selector: "x", worktree: "/workspace", directive: "", turn: { text: "x", attachments: [] }, correlation: "c" },
-      { operation: "create", selector: "x", worktree: "/workspace", directive: "/wsr", turn: { text: "different", attachments: [] }, correlation: "c" },
-      { operation: "create", selector: "x", worktree: "/workspace", directive: "/wsr", turn: { text: "/wsr", attachments: "no" }, correlation: "c" },
+      { operation: "create", selector: "x", worktree: "/workspace", directive: "/crystra", turn: { text: "different", attachments: [] }, correlation: "c" },
+      { operation: "create", selector: "x", worktree: "/workspace", directive: "/crystra", turn: { text: "/crystra", attachments: "no" }, correlation: "c" },
       { operation: "recover", worktree: 1, correlation: "c" }, { operation: "recover", worktree: "/workspace", deliveryId: 1, correlation: "c" },
       { operation: "status", worktree: 1, correlation: "c" }, { operation: "status", deliveryId: 1, correlation: "c" },
       { operation: "action-finish", turn: { text: 1, attachments: [] }, correlation: "c" },

@@ -20,7 +20,7 @@ const sha = (value: string): string => `sha256:${createHash("sha256").update(val
 type Scenario = "success" | "refused" | "hang" | "start-unknown" | "result-unknown" | "protocol-anomaly" | "crash" | "invalid-result" | "oversized-result" | "resume-mismatch";
 
 async function fixture(scenario: Scenario, overrides: Partial<{ version: string; login: boolean; models: readonly string[] }> = {}) {
-  const root = await mkdtemp(join(tmpdir(), "wsr-codex-provider-"));
+  const root = await mkdtemp(join(tmpdir(), "crystra-codex-provider-"));
   const worktreeCandidate = join(root, "worktree");
   const state = join(root, "state");
   await mkdir(worktreeCandidate);
@@ -52,7 +52,7 @@ process.stdin.on("data", chunk => { input += chunk; });
 process.stdin.on("end", () => {
   const outputIndex = process.argv.indexOf("--output-last-message");
   const schemaIndex = process.argv.indexOf("--output-schema");
-  fs.writeFileSync(capture, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), input, schema: JSON.parse(fs.readFileSync(process.argv[schemaIndex + 1], "utf8")), secretVisible: process.env.WSR_TEST_SECRET !== undefined }));
+  fs.writeFileSync(capture, JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), input, schema: JSON.parse(fs.readFileSync(process.argv[schemaIndex + 1], "utf8")), secretVisible: process.env.CRYSTRA_TEST_SECRET !== undefined }));
   process.on("SIGTERM", () => { fs.appendFileSync(killed, String(process.pid) + "\\n"); process.exit(143); });
   if (scenario === "hang") { setInterval(() => {}, 1000); return; }
   if (scenario === "refused") { process.stderr.write("request refused"); process.exit(7); }
@@ -178,13 +178,13 @@ describe("Codex CLI Agent Provider", () => {
     const value = await fixture("success");
     const lease = await acquire(value);
     const session = await lease.adapter.sessions.open({ dispatch: value.dispatch(), signal: new AbortController().signal });
-    process.env.WSR_TEST_SECRET = "must-not-reach-codex";
+    process.env.CRYSTRA_TEST_SECRET = "must-not-reach-codex";
     let events;
     try {
       events = await session.run({ objective: "Return a typed review" });
       await session.persist();
     } finally {
-      delete process.env.WSR_TEST_SECRET;
+      delete process.env.CRYSTRA_TEST_SECRET;
     }
 
     expect(events).toEqual([

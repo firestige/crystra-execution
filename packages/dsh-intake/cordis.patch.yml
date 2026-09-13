@@ -1,6 +1,6 @@
 - insert:
     - id: workflow-execution
-      name: 'wsr-dsh-intake'
+      name: 'crystra-execution-intake-internal'
       config:
         configFile: /__REQUIRED__/execution-config.yaml
         bindingFile: /__REQUIRED__/dsh-intake-bindings.json

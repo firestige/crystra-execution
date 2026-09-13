@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { verifyExecutionReleaseArtifacts } from "../../scripts/verify-release-artifacts.js";
 
 const names = {
-  core: "wsr-execution-0.1.0.tgz",
+  core: "crystra-execution-0.1.0.tgz",
 } as const;
 
 function digest(value: string): string {
@@ -18,7 +18,7 @@ function digest(value: string): string {
 async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), "execution-release-verifier-"));
   await writeFile(path.join(root, names.core), "core");
-  const notes = "# WSR Execution 0.1.0\n\n## What's new\n\n- fixture\n\n## Compatibility\n\n- `node`: `>=24.12.0 <25`\n- `dsh`: `0.1.1-rc.2`\n- `workflowContract`: `agentops.workflow-dsl@2.0.0`\n- `observationContract`: `agentops.observation@1.0.0`\n\n## Upgrade guide\n\nInstall both packages at `0.1.0`.\n";
+  const notes = "# Crystra Execution 0.1.0\n\n## What's new\n\n- fixture\n\n## Compatibility\n\n- `node`: `>=24.12.0 <25`\n- `dsh`: `0.1.1-rc.2`\n- `workflowContract`: `agentops.workflow-dsl@2.0.0`\n- `observationContract`: `agentops.observation@1.0.0`\n\n## Upgrade guide\n\nInstall both packages at `0.1.0`.\n";
   await writeFile(path.join(root, "release-notes.md"), notes);
   const metadata = {
     schemaVersion: "execution.release@1.0.0",
@@ -38,7 +38,7 @@ async function fixture() {
   for (const artifact of metadata.artifacts) {
     await writeFile(path.join(root, `${artifact.name}.publication.json`), `${JSON.stringify({
       schemaVersion: "execution.artifact-publication@1.0.0",
-      package: { name: "wsr-execution", version: "0.1.0" },
+      package: { name: "crystra-execution", version: "0.1.0" },
       compatibility: metadata.compatibility,
       artifact,
     })}\n`);
@@ -94,7 +94,7 @@ describe("Iteration 3 release artifact verifier", () => {
     const publicationFile = path.join(drifted.root, `${names.core}.publication.json`);
     await writeFile(publicationFile, `${JSON.stringify({
       schemaVersion: "execution.artifact-publication@1.0.0",
-      package: { name: "wsr-execution", version: "0.1.0" },
+      package: { name: "crystra-execution", version: "0.1.0" },
       compatibility: drifted.metadata.compatibility,
       artifact: { ...drifted.metadata.artifacts[0], sha256: digest("other") },
     })}\n`);

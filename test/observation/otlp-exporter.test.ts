@@ -15,7 +15,7 @@ import {
 import { canonicalJsonBytes } from "../../src/configuration/index.js";
 
 const require = createRequire(import.meta.url);
-const oracle = require("../../../system-contracts/observation/tools/validator.cjs") as {
+const oracle = require("../../.crystra-inputs/contracts/observation/tools/validator.cjs") as {
   decodeOtlpRequest(signal: "traces" | "logs", bytes: Buffer, options: { familySchema: string }): { decision: string; record_count: number };
 };
 const servers: Array<ReturnType<typeof createServer>> = [];

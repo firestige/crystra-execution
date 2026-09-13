@@ -12,7 +12,7 @@ const digest = (text: string) => `sha256:${createHash("sha256").update(text).dig
 
 describe("admitted instruction authority chain", () => {
   it("projects Role prompt, Action prompt, and ordered Skills after verifying every frozen digest", async () => {
-    const root = await mkdtemp(join(tmpdir(), "wsr-instruction-chain-")); roots.push(root);
+    const root = await mkdtemp(join(tmpdir(), "crystra-instruction-chain-")); roots.push(root);
     const role = "ROLE"; const action = "ACTION"; const first = "SKILL ONE"; const second = "SKILL TWO";
     const paths = {
       role: join(root, "role.md"), action: join(root, "action.md"), first: join(root, "first.md"), second: join(root, "second.md"),
@@ -32,15 +32,15 @@ describe("admitted instruction authority chain", () => {
     const projected = await projectAdmittedInstructionChain(session);
 
     expect(projected).toBe([
-      "<wsr-role-prompt resource=\"role.prompt\">", role, "</wsr-role-prompt>",
-      "<wsr-action-prompt resource=\"action.prompt\">", action, "</wsr-action-prompt>",
-      "<wsr-skill resource=\"skill.one\">", first, "</wsr-skill>",
-      "<wsr-skill resource=\"skill.two\">", second, "</wsr-skill>",
+      "<crystra-role-prompt resource=\"role.prompt\">", role, "</crystra-role-prompt>",
+      "<crystra-action-prompt resource=\"action.prompt\">", action, "</crystra-action-prompt>",
+      "<crystra-skill resource=\"skill.one\">", first, "</crystra-skill>",
+      "<crystra-skill resource=\"skill.two\">", second, "</crystra-skill>",
     ].join("\n"));
   });
 
   it("fails closed on missing or drifted Skill material instead of dropping the declared Skill", async () => {
-    const root = await mkdtemp(join(tmpdir(), "wsr-instruction-chain-drift-")); roots.push(root);
+    const root = await mkdtemp(join(tmpdir(), "crystra-instruction-chain-drift-")); roots.push(root);
     const rolePath = join(root, "role.md"); const actionPath = join(root, "action.md"); const skillPath = join(root, "skill.md");
     await Promise.all([writeFile(rolePath, "ROLE"), writeFile(actionPath, "ACTION"), writeFile(skillPath, "DRIFTED")]);
     const session = {

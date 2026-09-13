@@ -41,10 +41,10 @@ export async function verifyExecutionReleaseArtifacts(directory: string): Promis
     throw new ReleaseArtifactVerificationError("RELEASE_METADATA_INVALID");
   }
   const version = metadata.version as string;
-  const coreArchiveName = `wsr-execution-${version}.tgz`;
+  const coreArchiveName = `crystra-execution-${version}.tgz`;
   const artifactsExpected = Object.freeze([coreArchiveName]);
   const packageNames = Object.freeze<Record<string, string>>({
-    [coreArchiveName]: "wsr-execution",
+    [coreArchiveName]: "crystra-execution",
   });
   const compatibility = record(metadata.compatibility, Object.keys(COMPATIBILITY), "RELEASE_COMPATIBILITY_MISMATCH");
   if (Object.entries(COMPATIBILITY).some(([key, value]) => compatibility[key] !== value)) {

@@ -14,18 +14,18 @@ type CapabilityMatrix = Readonly<{
 }>;
 
 const EXPECTED = new Map([
-  ["firestige/wsr-execution", "active"],
-  ["firestige/wsr-evidence", "active"],
-  ["firestige/wsr-contracts", "active"],
-  ["firestige/wsr-workflow-package", "active"],
-  ["firestige/wsr-evolution", "parameter-only"],
+  ["firestige/crystra-execution", "active"],
+  ["firestige/crystra-evidence", "active"],
+  ["firestige/crystra-contracts", "active"],
+  ["firestige/crystra-workflow-package", "active"],
+  ["firestige/crystra-evolution", "parameter-only"],
   ["firestige/bi", "excluded"],
 ]);
 
 export function assertCapabilityMatrix(value: CapabilityMatrix): void {
   if (value === null || typeof value !== "object" || Array.isArray(value)
     || Object.keys(value).sort().join(",") !== "components,schemaVersion"
-    || value.schemaVersion !== "wsr.release-capability-matrix@1.0.0"
+    || value.schemaVersion !== "crystra.release-capability-matrix@1.0.0"
     || !Array.isArray(value.components) || value.components.length !== EXPECTED.size) {
     throw new Error("RELEASE_CAPABILITY_MATRIX_INVALID");
   }

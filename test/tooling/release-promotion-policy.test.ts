@@ -13,43 +13,43 @@ import {
 
 describe("Execution release promotion policy", () => {
   it("accepts only an RC tag derived from the stable package version", () => {
-    expect(() => assertPrereleaseCandidate("0.1.1-rc.1", "0.1.1")).not.toThrow();
+    expect(() => assertPrereleaseCandidate("crystra-execution-v0.1.1-rc.1", "0.1.1")).not.toThrow();
     expect(() => assertPrereleaseCandidate("0.1.1", "0.1.1")).toThrowError("PRERELEASE_TAG_REQUIRED");
-    expect(() => assertPrereleaseCandidate("0.1.2-rc.1", "0.1.1")).toThrowError("PRERELEASE_VERSION_MISMATCH");
-    expect(() => assertPrereleaseCandidate("0.1.1-rc.1", "next")).toThrowError("STABLE_PACKAGE_VERSION_REQUIRED");
+    expect(() => assertPrereleaseCandidate("crystra-execution-v0.1.2-rc.1", "0.1.1")).toThrowError("PRERELEASE_VERSION_MISMATCH");
+    expect(() => assertPrereleaseCandidate("crystra-execution-v0.1.1-rc.1", "next")).toThrowError("STABLE_PACKAGE_VERSION_REQUIRED");
   });
 
   it("accepts the qualification evidence emitted by the candidate workflow", () => {
     const evidence = {
       schemaVersion: "execution.release-qualification@1.0.0",
       packageVersion: "0.1.1",
-      candidateTag: "0.1.1-rc.1",
+      candidateTag: "crystra-execution-v0.1.1-rc.1",
       commit: "0123456789abcdef0123456789abcdef01234567",
       artifactMetadataSha256: "sha256:" + "a".repeat(64),
       componentGates: { status: "PASS" },
       remoteArtifactVerification: { status: "PASS" },
     } as const;
 
-    expect(() => assertFinalPromotionEligible("0.1.1", evidence, evidence.commit, evidence.artifactMetadataSha256, evidence.candidateTag)).not.toThrow();
-    expect(() => assertFinalPromotionEligible("0.1.1", {
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, evidence.commit, evidence.artifactMetadataSha256, evidence.candidateTag)).not.toThrow();
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", {
       ...evidence,
       remoteArtifactVerification: { status: "FAIL" },
     }, evidence.commit, evidence.artifactMetadataSha256)).toThrowError("REMOTE_ARTIFACT_VERIFICATION_REQUIRED");
-    expect(() => assertFinalPromotionEligible("0.1.1", {
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", {
       ...evidence,
       componentGates: { status: "FAIL" },
     }, evidence.commit, evidence.artifactMetadataSha256)).toThrowError("COMPONENT_GATES_REQUIRED");
-    expect(() => assertFinalPromotionEligible("0.1.1", {
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", {
       ...evidence,
       schemaVersion: "unknown",
     }, evidence.commit, evidence.artifactMetadataSha256)).toThrowError("QUALIFICATION_EVIDENCE_INVALID");
-    expect(() => assertFinalPromotionEligible("0.1.1", evidence, "f".repeat(40)))
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, "f".repeat(40)))
       .toThrowError("QUALIFICATION_COMMIT_MISMATCH");
-    expect(() => assertFinalPromotionEligible("0.1.2", evidence, evidence.commit))
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.2", evidence, evidence.commit))
       .toThrowError("FINAL_VERSION_MISMATCH");
-    expect(() => assertFinalPromotionEligible("0.1.1", evidence, evidence.commit, "sha256:" + "b".repeat(64)))
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, evidence.commit, "sha256:" + "b".repeat(64)))
       .toThrowError("QUALIFICATION_ARTIFACT_MISMATCH");
-    expect(() => assertFinalPromotionEligible("0.1.1", evidence, evidence.commit, evidence.artifactMetadataSha256, "0.1.1-rc.2"))
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, evidence.commit, evidence.artifactMetadataSha256, "crystra-execution-v0.1.1-rc.2"))
       .toThrowError("QUALIFICATION_CANDIDATE_MISMATCH");
   });
 
@@ -62,16 +62,16 @@ describe("Execution release promotion policy", () => {
     await writeFile(path.join(root, "release-qualification.json"), JSON.stringify({
       schemaVersion: "execution.release-qualification@1.0.0",
       packageVersion: "0.1.1",
-      candidateTag: "0.1.1-rc.1",
+      candidateTag: "crystra-execution-v0.1.1-rc.1",
       commit,
       artifactMetadataSha256: metadataSha,
       componentGates: { status: "PASS" },
       remoteArtifactVerification: { status: "PASS" },
     }));
 
-    await expect(runReleasePromotionPolicy(["candidate", "0.1.1-rc.1", "0.1.1"])).resolves.toBeUndefined();
+    await expect(runReleasePromotionPolicy(["candidate", "crystra-execution-v0.1.1-rc.1", "0.1.1"])).resolves.toBeUndefined();
     await expect(runReleasePromotionPolicy([
-      "promote", "0.1.1", path.join(root, "release-qualification.json"), commit, "0.1.1-rc.1",
+      "promote", "crystra-execution-v0.1.1", path.join(root, "release-qualification.json"), commit, "crystra-execution-v0.1.1-rc.1",
     ])).resolves.toBeUndefined();
     await expect(runReleasePromotionPolicy([])).rejects.toThrowError("RELEASE_POLICY_USAGE_INVALID");
   });

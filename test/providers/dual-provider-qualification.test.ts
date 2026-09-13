@@ -79,7 +79,7 @@ function provider(identity: "provider.copilot" | "provider.codex", version: "1.0
 
 describe("dual real-Provider Delivery qualification", () => {
   it("registers both exact Providers in one Delivery, routes frozen Roles without fallback or crosstalk, and tears down", async () => {
-    const root = await mkdtemp(join(tmpdir(), "wsr-dual-provider-test-")); temporaryDirectories.push(root);
+    const root = await mkdtemp(join(tmpdir(), "crystra-dual-provider-test-")); temporaryDirectories.push(root);
     const worktreeCandidate = join(root, "worktree"); const instructionsDirectory = join(root, "instructions");
     await mkdir(worktreeCandidate); await mkdir(instructionsDirectory);
     const canonicalWorktree = await realpath(worktreeCandidate);
@@ -145,7 +145,7 @@ describe("dual real-Provider Delivery qualification", () => {
     ["session-teardown-failed", "session-teardown", "stage-failed"],
     ["realm-teardown-failed", "realm-teardown", "stage-failed"],
   ] as const)("fails closed at the bounded %s qualification stage and still enters teardown", async (scenario, stage, reason) => {
-    const root = await mkdtemp(join(tmpdir(), "wsr-dual-provider-failure-")); temporaryDirectories.push(root);
+    const root = await mkdtemp(join(tmpdir(), "crystra-dual-provider-failure-")); temporaryDirectories.push(root);
     const worktreeCandidate = join(root, "worktree"); const instructionsDirectory = join(root, "instructions");
     await mkdir(worktreeCandidate); await mkdir(instructionsDirectory);
     const canonicalWorktree = await realpath(worktreeCandidate);
@@ -172,7 +172,7 @@ describe("dual real-Provider Delivery qualification", () => {
   });
 
   it("rejects a registered Provider whose adapter key cannot serve the frozen Role route", async () => {
-    const root = await mkdtemp(join(tmpdir(), "wsr-dual-provider-route-")); temporaryDirectories.push(root);
+    const root = await mkdtemp(join(tmpdir(), "crystra-dual-provider-route-")); temporaryDirectories.push(root);
     const worktreeCandidate = join(root, "worktree"); const instructionsDirectory = join(root, "instructions");
     await mkdir(worktreeCandidate); await mkdir(instructionsDirectory);
     const canonicalWorktree = await realpath(worktreeCandidate);

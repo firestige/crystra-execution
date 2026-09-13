@@ -249,7 +249,7 @@ async function selectWorkspace(cdp: CdpConnection, url: URL, worktree: string): 
       if (button) { button.click(); return undefined; }
       if (document.querySelector('#root')?.hasAttribute('inert') !== false) return undefined;
       if ([...document.querySelectorAll('button')].some((candidate) => /^(选择工作区|Select workspace)$/u.test(candidate.textContent?.trim() ?? ''))) return 'picker';
-      if (document.querySelector('[data-wsr-sidebar-resources="true"]')) return 'active';
+      if (document.querySelector('[data-crystra-sidebar-resources="true"]')) return 'active';
       if (document.querySelector('textarea,[contenteditable="true"]')) return 'active';
       return undefined;
     })()`);
@@ -310,7 +310,7 @@ async function reopenWorkspace(cdp: CdpConnection, url: URL, workspaceId: string
       return style.display !== 'none' && style.visibility !== 'hidden'
         && !element.hasAttribute('disabled') && element.getAttribute('aria-disabled') !== 'true';
     });
-    if ((text.includes(title) && document.querySelector('[data-wsr-sidebar-resources="true"]')) || activeInput) return 'restored';
+    if ((text.includes(title) && document.querySelector('[data-crystra-sidebar-resources="true"]')) || activeInput) return 'restored';
     if (/选择工作区|Select workspace/u.test(text)) return 'picker';
     return undefined;
   })()`), "PRODUCT_BROWSER_RESTART_STATE_UNAVAILABLE", 40_000);
@@ -363,24 +363,24 @@ async function sessionId(url: URL, workspaceId: string): Promise<string> {
 }
 
 async function observe(cdp: CdpConnection): Promise<void> {
-  await evaluate(cdp, `window.__wsrProductEvents = []; new MutationObserver(() => {
-    for (const element of document.querySelectorAll('[data-wsr-presentation="true"]')) {
+  await evaluate(cdp, `window.__crystraProductEvents = []; new MutationObserver(() => {
+    for (const element of document.querySelectorAll('[data-crystra-presentation="true"]')) {
       const event = {
-        kind: element.getAttribute('data-wsr-kind'),
-        correlation: element.getAttribute('data-wsr-correlation'),
-        surface: element.getAttribute('data-wsr-surface'),
-        chatRole: element.getAttribute('data-wsr-chat-role'),
+        kind: element.getAttribute('data-crystra-kind'),
+        correlation: element.getAttribute('data-crystra-correlation'),
+        surface: element.getAttribute('data-crystra-surface'),
+        chatRole: element.getAttribute('data-crystra-chat-role'),
         role: element.getAttribute('role'),
         tag: element.tagName.toLowerCase(),
         text: element.textContent
       };
-      if (!window.__wsrProductEvents.some((candidate) => JSON.stringify(candidate) === JSON.stringify(event))) window.__wsrProductEvents.push(event);
+      if (!window.__crystraProductEvents.some((candidate) => JSON.stringify(candidate) === JSON.stringify(event))) window.__crystraProductEvents.push(event);
     }
   }).observe(document.documentElement, { childList: true, subtree: true, attributes: true }); true`);
 }
 
 async function events(cdp: CdpConnection): Promise<Array<{ kind: string; correlation: string; surface: string; chatRole: string | null; role: string | null; tag: string; text: string }>> {
-  return await evaluate(cdp, "window.__wsrProductEvents ?? []");
+  return await evaluate(cdp, "window.__crystraProductEvents ?? []");
 }
 
 async function waitForKind(cdp: CdpConnection, kind: string, after = 0, timeoutMs = 240_000, surface?: "chat" | "sidebar") {
@@ -402,19 +402,19 @@ async function waitForEitherKind(cdp: CdpConnection, kinds: readonly string[], a
   }, `PRODUCT_PRESENTATION_MISSING:${kinds.join("|")}`, timeoutMs);
 }
 
-async function clickWsrCurrentStatus(cdp: CdpConnection): Promise<void> {
+async function clickCrystraCurrentStatus(cdp: CdpConnection): Promise<void> {
   await waitFor(async () => await evaluate(cdp, `(() => {
-    const status = [...document.querySelectorAll('[data-wsr-sidebar="true"] button')]
+    const status = [...document.querySelectorAll('[data-crystra-sidebar="true"] button')]
       .find((candidate) => candidate.textContent?.trim() === 'Current status');
     if (status) {
       status.click();
       return true;
     }
     const action = [...document.querySelectorAll('button')].find((candidate) =>
-      candidate.textContent?.trim() === 'WSR' || candidate.getAttribute('aria-label') === 'WSR');
+      candidate.textContent?.trim() === 'Crystra' || candidate.getAttribute('aria-label') === 'Crystra');
     if (action) action.click();
     return false;
-  })()`) === true ? true : undefined, "PRODUCT_WSR_CURRENT_STATUS_UNAVAILABLE", 40_000);
+  })()`) === true ? true : undefined, "PRODUCT_CRYSTRA_CURRENT_STATUS_UNAVAILABLE", 40_000);
 }
 
 async function attach(cdp: CdpConnection, filename: string): Promise<void> {
@@ -444,8 +444,8 @@ async function initializeQualificationWorktree(worktree: string, title: string, 
   await writeFile(path.join(worktree, "README.md"), `# ${title}\n\nA minimal repository for product E2E.\n`);
   await writeFile(path.join(worktree, ".gitignore"), "ignored-cache/\n");
   if (roles.length > 0) {
-    await mkdir(path.join(worktree, ".wsr"));
-    await writeFile(path.join(worktree, ".wsr", "role-provider-bindings.json"), `${JSON.stringify(qualificationRoleBindings(roles), null, 2)}\n`);
+    await mkdir(path.join(worktree, ".crystra"));
+    await writeFile(path.join(worktree, ".crystra", "role-provider-bindings.json"), `${JSON.stringify(qualificationRoleBindings(roles), null, 2)}\n`);
   }
   execFileSync("git", ["add", "."], { cwd: worktree });
   execFileSync("git", ["commit", "-qm", "baseline"], { cwd: worktree });
@@ -498,7 +498,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     const coreManifest = JSON.parse(await readFile(path.join(import.meta.dirname, "../package.json"), "utf8")) as { readonly version: string };
     await bindLocalPackageCandidate(
       path.join(dshHome, "profiles/web"),
-      "wsr-execution",
+      "crystra-execution",
       coreManifest.version,
       path.resolve(options.coreArchive),
     );
@@ -515,7 +515,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     const outsideSession = await sessionId(started.url, outsideWorkspaceId);
     await observe(cdp);
 
-    const admissionCommand = "/wsr create missing-workflow-for-workspace-admission@0.0.0\nThis exact registered workspace request must remain visible.";
+    const admissionCommand = "/crystra create missing-workflow-for-workspace-admission@0.0.0\nThis exact registered workspace request must remain visible.";
     await submitBrowserCommand(cdp, admissionCommand);
     let admissionResult: Awaited<ReturnType<typeof waitForKind>>;
     try {
@@ -536,15 +536,15 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
       return [...document.querySelectorAll('*')].some((element) => element.textContent === ${JSON.stringify(admissionCommand)});
     })()`) === true ? true : undefined, "PRODUCT_FAILED_COMMAND_INPUT_MISSING", 40_000);
     const isolatedCommands = await evaluate(cdp, `([...document.querySelectorAll('*')]
-      .filter((element) => element.textContent?.trim() === '/wsr')
+      .filter((element) => element.textContent?.trim() === '/crystra')
       .map((element) => ({
         tag: element.tagName.toLowerCase(),
         className: element.className,
         parentText: element.parentElement?.textContent,
         grandparentText: element.parentElement?.parentElement?.textContent,
       })))`);
-    if (isolatedCommands.some((element: any) => element.parentText?.trim() === "/wsr"
-      && element.grandparentText?.trim() === "/wsr")) {
+    if (isolatedCommands.some((element: any) => element.parentText?.trim() === "/crystra"
+      && element.grandparentText?.trim() === "/crystra")) {
       throw new Error(`PRODUCT_INTERNAL_COMMAND_ROW_VISIBLE:${JSON.stringify(isolatedCommands)}`);
     }
     const admissionHistory = await rpc(started.url, "session.history", { sessionId: outsideSession });
@@ -557,7 +557,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     await observe(cdp);
 
     const emptyEventsBefore = (await events(cdp)).filter((event) => event.surface === "sidebar");
-    await submitBrowserCommand(cdp, "/wsr list");
+    await submitBrowserCommand(cdp, "/crystra list");
     let emptyPresentation: Awaited<ReturnType<typeof waitForEitherKind>>;
     try {
       emptyPresentation = await waitForKind(cdp, "delivery-list", emptyEventsBefore.filter((event) => event.kind === "delivery-list").length, 40_000, "sidebar");
@@ -580,7 +580,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
 
     await attach(cdp, attachmentFile);
     const helloBefore = (await events(cdp)).filter((event) => event.surface === "chat");
-    await submitBrowserCommand(cdp, `/wsr create ${dshProductQualificationSelectors.hello}\nGreet the Wave 4 reviewer and acknowledge the attachment.`);
+    await submitBrowserCommand(cdp, `/crystra create ${dshProductQualificationSelectors.hello}\nGreet the Wave 4 reviewer and acknowledge the attachment.`);
     let helloTerminal: Awaited<ReturnType<typeof waitForEitherKind>>;
     try {
       helloTerminal = await waitForEitherKind(cdp, ["terminal-result", "error"], {
@@ -637,7 +637,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     await observe(cdp);
     const exactBefore = (await events(cdp)).filter((event) => event.surface === "chat");
     const exactManifestsBefore = new Set(await readdir(helloManifestDirectory));
-    await submitBrowserCommand(cdp, `/wsr create ${dshProductQualificationSelectors.exactRegression}\nReturn a concise exact-selector qualification result.`);
+    await submitBrowserCommand(cdp, `/crystra create ${dshProductQualificationSelectors.exactRegression}\nReturn a concise exact-selector qualification result.`);
     const exactTerminal = await waitForEitherKind(cdp, ["terminal-result", "error"], {
       "terminal-result": exactBefore.filter((event) => event.kind === "terminal-result").length,
       error: exactBefore.filter((event) => event.kind === "error").length,
@@ -661,7 +661,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     await observe(cdp);
     const implementationBefore = (await events(cdp)).filter((event) => event.surface === "chat");
     const implementationManifestsBefore = new Set(await readdir(helloManifestDirectory));
-    await submitBrowserCommand(cdp, `/wsr create ${dshProductQualificationSelectors.implementation}\nInspect the repository and begin a bounded implementation qualification.`);
+    await submitBrowserCommand(cdp, `/crystra create ${dshProductQualificationSelectors.implementation}\nInspect the repository and begin a bounded implementation qualification.`);
     const implementationManifest = await waitFor(async () => {
       for (const name of await readdir(helloManifestDirectory)) {
         if (implementationManifestsBefore.has(name)) continue;
@@ -690,7 +690,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     const abandonWorkspaceId = await selectWorkspace(cdp, started.url, canonicalAbandonWorktree);
     const abandonSession = await sessionId(started.url, abandonWorkspaceId);
     await observe(cdp);
-    await submitBrowserCommand(cdp, `/wsr create ${dshProductQualificationSelectors.systemDesign}\nEstablish the initial authority context for an abandon recovery qualification.`);
+    await submitBrowserCommand(cdp, `/crystra create ${dshProductQualificationSelectors.systemDesign}\nEstablish the initial authority context for an abandon recovery qualification.`);
     const abandonBinding = await waitFor(async () => {
       try {
         const document = JSON.parse(await readFile(bindingFile, "utf8"));
@@ -705,7 +705,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
       } catch { return undefined; }
     }, "PRODUCT_ABANDON_OCCUPIED_BINDING_NOT_OBSERVED", 120_000);
     const abandonCommandBefore = (await events(cdp)).filter((event) => event.surface === "chat");
-    await submitBrowserCommand(cdp, "/wsr abandon");
+    await submitBrowserCommand(cdp, "/crystra abandon");
     const abandoned = await waitForEitherKind(cdp, ["terminal-result", "error"], {
       "terminal-result": abandonCommandBefore.filter((event) => event.kind === "terminal-result").length,
       error: abandonCommandBefore.filter((event) => event.kind === "error").length,
@@ -741,7 +741,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
       const inputCount = before.filter((event) => event.kind === "action-input-request").length;
       const manifestDirectory = path.join(durable, "state", "manifests");
       const manifestsBefore = new Set(await readdir(manifestDirectory));
-      await submitBrowserCommand(cdp, `/wsr create ${dshProductQualificationSelectors.systemDesign}\nDesign a local-only service that exposes one health endpoint. The intended users and measurable success criteria are deliberately unspecified so the Workflow must resolve a genuine product-level unknown. Qualification attempt ${String(attempt)}.`);
+      await submitBrowserCommand(cdp, `/crystra create ${dshProductQualificationSelectors.systemDesign}\nDesign a local-only service that exposes one health endpoint. The intended users and measurable success criteria are deliberately unspecified so the Workflow must resolve a genuine product-level unknown. Qualification attempt ${String(attempt)}.`);
       let manifestName: string;
       try {
         manifestName = await waitFor(async () => {
@@ -841,7 +841,7 @@ export async function qualifyDshProductE2e(options: DshProductQualificationOptio
     await reopenWorkspace(cdp, restarted.url, systemWorkspaceId);
     await reopenConversation(cdp, systemSessionTitle);
     await observe(cdp);
-    await clickWsrCurrentStatus(cdp);
+    await clickCrystraCurrentStatus(cdp);
     let recovered: Awaited<ReturnType<typeof events>>[number];
     try {
       recovered = await waitFor(async () => {

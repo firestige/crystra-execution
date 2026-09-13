@@ -35,8 +35,8 @@ function input(paths: Awaited<ReturnType<typeof deployment>>) {
     },
     workflowSource: {
       kind: "github",
-      repository: "firestige/wsr-workflow-package",
-      releasesBaseUrl: "https://api.github.com/repos/firestige/wsr-workflow-package/releases",
+      repository: "firestige/crystra-workflow-package",
+      releasesBaseUrl: "https://api.github.com/repos/firestige/crystra-workflow-package/releases",
       assetPattern: "workflow-package-{name}-{version}.tar.gz",
     },
     runner: {
@@ -51,7 +51,7 @@ function input(paths: Awaited<ReturnType<typeof deployment>>) {
       maxBatchBytes: 4_194_304,
       flushIntervalMs: 1000,
       shutdownFlushMs: 3000,
-      serviceName: "workflow-self-recursive-execution",
+      serviceName: "crystra-execution",
     },
     controls: {
       startupTimeoutMs: 30_000,
@@ -76,7 +76,7 @@ describe("Execution configuration 2.0", () => {
   it("ships a closed machine schema without Provider selection or credential authority", async () => {
     const schema = JSON.parse(await readFile(new URL("../../config/schema/execution.config.v2.schema.json", import.meta.url), "utf8")) as Record<string, any>;
     expect(schema).toMatchObject({
-      $id: "urn:wsr:execution:config:2.0.0",
+      $id: "urn:crystra:execution:config:2.0.0",
       additionalProperties: false,
       properties: { runner: { additionalProperties: false, required: ["implementationKey", "host", "maxParallelToolCalls"] } },
     });
@@ -84,7 +84,7 @@ describe("Execution configuration 2.0", () => {
     for (const prohibited of ["credential", "defaultmodel", "defaultprovider", "providerpriority", "fallbackprovider"]) expect(bytes).not.toContain(prohibited);
   });
 
-  it("loads WSR-owned settings without reading or representing Provider configuration", async () => {
+  it("loads Crystra-owned settings without reading or representing Provider configuration", async () => {
     const paths = await deployment();
     const path = join(paths.root, "execution.json");
     await writeFile(path, JSON.stringify(input(paths)));
@@ -135,7 +135,7 @@ describe("Execution configuration 2.0", () => {
     for (const candidate of candidates) await expect(load(candidate)).rejects.toMatchObject({ code: "CONFIG_UNKNOWN_KEY" });
   });
 
-  it("projects only WSR-owned recovery inputs and excludes the admission-only default model", async () => {
+  it("projects only Crystra-owned recovery inputs and excludes the admission-only default model", async () => {
     const paths = await deployment();
     const path = join(paths.root, "execution.json");
     await writeFile(path, JSON.stringify(input(paths)));

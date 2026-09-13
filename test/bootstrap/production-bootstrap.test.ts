@@ -25,7 +25,7 @@ import { createFormatHostOperationHandler } from "../../src/bootstrap/production
 
 const roots: string[] = [];
 const servers: Server[] = [];
-const repositoryRoot = path.dirname(fileURLToPath(new URL("../..", import.meta.url)));
+const repositoryRoot = path.join(fileURLToPath(new URL("../../", import.meta.url)), ".crystra-inputs");
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
@@ -50,7 +50,7 @@ async function fixtureV2(options: Readonly<{
   await writeFile(configFile, `${JSON.stringify({
     schemaVersion: "execution.config@2.0.0",
     paths: { repositoryRoot: repository, workspaceRoot, allowedWorktreeRoots: [workspaceRoot], stateRoot },
-    workflowSource: { kind: "github", repository: "firestige/wsr-workflow-package", releasesBaseUrl: "https://api.github.example.test/repos/firestige/wsr-workflow-package/releases", assetPattern: "workflow-package-{name}-{version}.tar.gz" },
+    workflowSource: { kind: "github", repository: "firestige/crystra-workflow-package", releasesBaseUrl: "https://api.github.example.test/repos/firestige/crystra-workflow-package/releases", assetPattern: "workflow-package-{name}-{version}.tar.gz" },
     runner: { implementationKey: "runner.v2", host: { engine: "langgraph" }, maxParallelToolCalls: 2 },
     observation: { enabled: options.observationEndpoint !== undefined, ...(options.observationEndpoint === undefined ? {} : { endpoint: options.observationEndpoint }), timeoutMs: 100, maxBatchRecords: 512, maxBatchBytes: 4_194_304, flushIntervalMs: 1_000, shutdownFlushMs: 1_000, serviceName: "execution-v2-fixture" },
     controls: { startupTimeoutMs: 10_000, executionTimeoutMs: 10_000, shutdownTimeoutMs: 10_000, maxConcurrentDeliveries: 2, allowExplicitRefresh: false, diagnosticMaxBytes: 512 },
@@ -88,8 +88,8 @@ function scopedReleaseNetworkV2(archive: Uint8Array, packageDigest: string, name
   const provenance = Buffer.from(`${JSON.stringify({
     schemaVersion: "workflow-package.provenance@1.0.0",
     subject: { name: archiveName, sha256: archiveDigest },
-    source: { repository: "firestige/wsr-workflow-package", revision: "a".repeat(40) },
-    contract: { repository: "firestige/wsr-contracts", revision: contractRevision },
+    source: { repository: "firestige/crystra-workflow-package", revision: "a".repeat(40) },
+    contract: { repository: "firestige/crystra-contracts", revision: contractRevision },
     builder: { workflow: ".github/workflows/release-candidate.yml" },
   })}\n`);
   const provenanceDigest = `sha256:${createHash("sha256").update(provenance).digest("hex")}`;
@@ -100,7 +100,7 @@ function scopedReleaseNetworkV2(archive: Uint8Array, packageDigest: string, name
     archive: { name: archiveName, sha256: archiveDigest, bytes: archive.byteLength },
     checksum: { name: checksumName },
     provenance: { name: provenanceName, sha256: provenanceDigest },
-    contract: { repository: "firestige/wsr-contracts", revision: contractRevision, minVersion: "2.0.0", maxVersion: "2.0.0" },
+    contract: { repository: "firestige/crystra-contracts", revision: contractRevision, minVersion: "2.0.0", maxVersion: "2.0.0" },
   }));
   const responses = new Map<string, Uint8Array>([
     [`${base}/${archiveName}`, archive],
@@ -211,8 +211,8 @@ function implementationProvider(requestInput: Readonly<{ next(): number }>): Age
 
 async function writeImplementationRoleBindings(worktree: string): Promise<void> {
   const roles = JSON.parse(await readFile(path.join(repositoryRoot, "workflow-package/implementation/definition/roles.json"), "utf8")) as { roles: Array<{ id: string }> };
-  await mkdir(path.join(worktree, ".wsr"), { recursive: true });
-  await writeFile(path.join(worktree, ".wsr/role-provider-bindings.json"), `${JSON.stringify({
+  await mkdir(path.join(worktree, ".crystra"), { recursive: true });
+  await writeFile(path.join(worktree, ".crystra/role-provider-bindings.json"), `${JSON.stringify({
     schemaVersion: "execution.repository-role-provider-bindings@1.0.0",
     bindings: Object.fromEntries(roles.roles.map(({ id }) => [id, {
       agentProvider: { identity: "provider.dsh", version: "0.1.1-rc.2" },
@@ -248,7 +248,7 @@ describe("Wave 6 production bootstrap", () => {
     await new Promise<void>((resolve) => observationEndpoint.listen(0, "127.0.0.1", resolve));
     const observationAddress = observationEndpoint.address();
     if (observationAddress === null || typeof observationAddress === "string") throw new Error("observation endpoint unavailable");
-    const workflowRoot = process.env.WSR_WORKFLOW_PACKAGE_ROOT ?? path.join(repositoryRoot, "workflow-package");
+    const workflowRoot = process.env.CRYSTRA_WORKFLOW_PACKAGE_ROOT ?? path.join(repositoryRoot, "workflow-package");
     const hello = path.join(workflowRoot, "hello-world-workflow");
     const packageDocument = JSON.parse(await readFile(path.join(hello, "definition/package.json"), "utf8")) as { package: { digest: string } };
     const materialRoot = await realpath(await mkdtemp(path.join(tmpdir(), "production-v2-package-")));
@@ -263,8 +263,8 @@ describe("Wave 6 production bootstrap", () => {
       network: scopedReleaseNetworkV2(archive, packageDocument.package.digest),
       observationEndpoint: `http://127.0.0.1:${observationAddress.port}`,
     });
-    await mkdir(path.join(worktree, ".wsr"));
-    await writeFile(path.join(worktree, ".wsr/role-provider-bindings.json"), `${JSON.stringify({
+    await mkdir(path.join(worktree, ".crystra"));
+    await writeFile(path.join(worktree, ".crystra/role-provider-bindings.json"), `${JSON.stringify({
       schemaVersion: "execution.repository-role-provider-bindings@1.0.0",
       bindings: {
         "role.greeter": { agentProvider: { identity: "provider.copilot", version: "1.0.78" }, model: { provider: "github-copilot", model: "gpt-5.3-codex" } },
@@ -407,7 +407,7 @@ describe("Wave 6 production bootstrap", () => {
     }) as any;
     const waiting = broker.workflowBridge("delivery-wait").request(request);
     await expect.poll(() => presentations).toEqual([{
-      schemaVersion: "wsr.presentation@1.0.0",
+      schemaVersion: "crystra.presentation@1.0.0",
       correlation: "intake-correlation",
       kind: "action-input-request",
       data: { prompt: { question: "Confirm?" } },
@@ -444,7 +444,7 @@ describe("Wave 6 production bootstrap", () => {
     await broker.bridge("delivery-output").publish(frame("node-review", { greeting: "Reviewed hello" }));
 
     expect(presentations).toEqual([{
-      schemaVersion: "wsr.presentation@1.0.0",
+      schemaVersion: "crystra.presentation@1.0.0",
       correlation: "intake-correlation",
       kind: "action-output",
       data: { label: "action.greet", content: { text: "Hello" } },
@@ -525,7 +525,7 @@ describe("Wave 6 production bootstrap", () => {
       worktree, selector: "missing@1.0.0", prompt: { text: "run", attachments: [] },
     })).resolves.toMatchObject({ kind: "ERROR", code: "WORKFLOW_NOT_FOUND" });
     expect(requested).toEqual([
-      "https://api.github.example.test/repos/firestige/wsr-workflow-package/releases?per_page=100&page=1",
+      "https://api.github.example.test/repos/firestige/crystra-workflow-package/releases?per_page=100&page=1",
     ]);
 
     await application.close();

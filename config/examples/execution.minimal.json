@@ -1,15 +1,15 @@
 {
   "schemaVersion": "execution.config@2.0.0",
   "paths": {
-    "repositoryRoot": "/srv/wsr/repository",
-    "workspaceRoot": "/srv/wsr/workspaces",
-    "allowedWorktreeRoots": ["/srv/wsr/workspaces"],
-    "stateRoot": "/var/lib/wsr/execution"
+    "repositoryRoot": "/srv/crystra/repository",
+    "workspaceRoot": "/srv/crystra/workspaces",
+    "allowedWorktreeRoots": ["/srv/crystra/workspaces"],
+    "stateRoot": "/var/lib/crystra/execution"
   },
   "workflowSource": {
     "kind": "github",
-    "repository": "firestige/wsr-workflow-package",
-    "releasesBaseUrl": "https://api.github.com/repos/firestige/wsr-workflow-package/releases",
+    "repository": "firestige/crystra-workflow-package",
+    "releasesBaseUrl": "https://api.github.com/repos/firestige/crystra-workflow-package/releases",
     "assetPattern": "workflow-package-{name}-{version}.tar.gz"
   },
   "runner": {
@@ -24,7 +24,7 @@
     "maxBatchBytes": 4194304,
     "flushIntervalMs": 1000,
     "shutdownFlushMs": 3000,
-    "serviceName": "workflow-self-recursive-execution"
+    "serviceName": "crystra-execution"
   },
   "controls": {
     "startupTimeoutMs": 30000,

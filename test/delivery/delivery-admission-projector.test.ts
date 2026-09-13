@@ -18,7 +18,7 @@ import {
 } from "../../src/delivery/index.js";
 import { AgentProviderFactoryRegistry, type AgentProviderRealmFactory } from "../../src/providers/provider.js";
 
-const repositoryRoot = path.dirname(fileURLToPath(new URL("../..", import.meta.url)));
+const repositoryRoot = path.join(fileURLToPath(new URL("../../", import.meta.url)), ".crystra-inputs");
 const executionRoot = fileURLToPath(new URL("../../", import.meta.url)).replace(/\/$/u, "");
 
 function digest(value: string): `sha256:${string}` {
@@ -79,7 +79,7 @@ async function firstPartyManifest(input: {
     deliveryId: `delivery-${input.name}`,
     taskId: `task-${input.name}`,
     createdAt: 1,
-    canonicalWorktree: repositoryRoot,
+    canonicalWorktree: executionRoot,
     workflowPackage: {
       name: input.packageDocument.package.name,
       exactVersion: input.packageDocument.package.version,
@@ -99,7 +99,7 @@ describe("frozen Delivery Admission production projection", () => {
   it.each([
     ["implementation", path.join(repositoryRoot, "workflow-package", "implementation", "definition")],
     ["system-design", path.join(repositoryRoot, "workflow-package", "system-design", "definition")],
-    ["contract-minimal", path.join(repositoryRoot, "system-contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal")],
+    ["contract-minimal", path.join(repositoryRoot, "contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal")],
   ])("projects the exact %s Package and persisted Manifest without raw admission inputs", async (name, definition) => {
     const packageDocument = JSON.parse(await readFile(path.join(definition, "package.json"), "utf8"));
     const snapshotDocument = JSON.parse(await readFile(path.join(definition, "snapshot.json"), "utf8"));
@@ -144,7 +144,7 @@ describe("frozen Delivery Admission production projection", () => {
   });
 
   it("binds the admitted entry input using only its declared JSON field formats", async () => {
-    const source = path.join(repositoryRoot, "system-contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
+    const source = path.join(repositoryRoot, "contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
     const root = await mkdtemp(path.join(tmpdir(), "delivery-projector-formats-"));
     const definition = path.join(root, "definition");
     await cp(source, definition, { recursive: true });
@@ -184,7 +184,7 @@ describe("frozen Delivery Admission production projection", () => {
     const activation = await new DeliveryAdmissionProjector().project(manifest);
     expect(activation.initial.state.values.__deliveryTaskPrompt).toEqual({
       request: "format-only prompt",
-      repository: repositoryRoot,
+      repository: executionRoot,
       label: "",
       accepted: false,
       count: 0,
@@ -203,7 +203,7 @@ describe("frozen Delivery Admission production projection", () => {
   });
 
   it("normalizes an omitted Action input schema to the explicit ABSENT sentinel", async () => {
-    const source = path.join(repositoryRoot, "system-contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
+    const source = path.join(repositoryRoot, "contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
     const root = await mkdtemp(path.join(tmpdir(), "delivery-projector-absent-input-"));
     const definition = path.join(root, "definition");
     await cp(source, definition, { recursive: true });
@@ -244,7 +244,7 @@ describe("frozen Delivery Admission production projection", () => {
     await writeFile(path.join(workspace, "untracked.txt"), "dirty untracked\n");
     await writeFile(path.join(workspace, "cache", "large.bin"), "ignored-v1\n");
 
-    const definition = path.join(repositoryRoot, "system-contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
+    const definition = path.join(repositoryRoot, "contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
     const packageDocument = JSON.parse(await readFile(path.join(definition, "package.json"), "utf8"));
     const snapshotDocument = JSON.parse(await readFile(path.join(definition, "snapshot.json"), "utf8"));
     const promptSnapshot = await captureTaskPromptSnapshot({

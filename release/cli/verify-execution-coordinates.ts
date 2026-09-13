@@ -11,10 +11,10 @@ type CoordinateInput = Readonly<{ core: Manifest; workflow: string }>;
 
 function verify(input: CoordinateInput): string {
   const version = input.core.version;
-  if (input.core.name !== "wsr-execution") {
+  if (input.core.name !== "crystra-execution") {
     throw new Error("RELEASE_PACKAGE_VERSION_MISMATCH");
   }
-  if (/wsr-execution-(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.tgz/u.test(input.workflow)) {
+  if (/crystra-execution-(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.tgz/u.test(input.workflow)) {
     throw new Error("RELEASE_WORKFLOW_VERSION_HARDCODED");
   }
   return version;

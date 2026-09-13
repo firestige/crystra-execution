@@ -19,15 +19,15 @@ describe("local E2E preparation", () => {
       defaults: { schemaVersion: "execution.config@2.0.0" },
     });
     expect(input.releaseDirectory).toBe(path.join(input.worktree, "tmp/local-e2e/release"));
-    expect(input.durableDirectory).toBe(path.resolve(input.worktree, "../wsr-local"));
+    expect(input.durableDirectory).toBe(path.resolve(input.worktree, "../crystra-local"));
   });
 
   it("builds verified artifacts and initializes deployment-specific local files in one operation", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "local-e2e-prepare-"));
     const executionRoot = path.join(root, "execution-system");
-    const worktree = path.join(root, "workflow-self-recursive");
+    const worktree = path.join(root, "crystra");
     const releaseDirectory = path.join(worktree, "tmp/local-e2e/release");
-    const durableDirectory = path.join(root, "wsr-local");
+    const durableDirectory = path.join(root, "crystra-local");
     const calls: readonly string[][] = [];
     const mutableCalls = calls as string[][];
     await writeFile(path.join(root, "package.json"), "{}").catch(() => undefined);
@@ -53,8 +53,8 @@ describe("local E2E preparation", () => {
     expect(result).toMatchObject({
       version: "0.1.1",
       configFile: path.join(durableDirectory, "execution.json"),
-      coreArchive: path.join(releaseDirectory, "wsr-execution-0.1.1.tgz"),
-      pluginArchive: path.join(releaseDirectory, "wsr-dsh-intake-0.1.1.tgz"),
+      coreArchive: path.join(releaseDirectory, "crystra-execution-0.1.1.tgz"),
+      pluginArchive: path.join(releaseDirectory, "crystra-execution-intake-internal-0.1.1.tgz"),
     });
     const config = JSON.parse(await readFile(result.configFile, "utf8"));
     expect(config.paths).toEqual({
@@ -70,7 +70,7 @@ describe("local E2E preparation", () => {
     const executionRoot = path.resolve(import.meta.dirname, "../..");
     const root = await mkdtemp(path.join(tmpdir(), "local-e2e-valid-config-"));
     const worktree = path.join(root, "workspace/repository");
-    const durableDirectory = path.join(path.dirname(worktree), "wsr-local");
+    const durableDirectory = path.join(path.dirname(worktree), "crystra-local");
     await (await import("node:fs/promises")).mkdir(worktree, { recursive: true });
     const defaults = JSON.parse(await readFile(path.join(executionRoot, "config/defaults/execution.default.json"), "utf8"));
 
@@ -90,7 +90,7 @@ describe("local E2E preparation", () => {
   it("repairs only legacy generated path scope while preserving user configuration", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "local-e2e-repair-config-"));
     const worktree = path.join(root, "workspace/repository");
-    const durableDirectory = path.join(root, "workspace/wsr-local");
+    const durableDirectory = path.join(root, "workspace/crystra-local");
     const configFile = path.join(durableDirectory, "execution.json");
     const { mkdir } = await import("node:fs/promises");
     await mkdir(durableDirectory, { recursive: true });

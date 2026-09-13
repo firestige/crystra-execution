@@ -194,7 +194,7 @@ export async function qualifyTemporaryDualProviderDelivery(runtime: Readonly<{
   codexFactory: (stateDirectory: string) => AgentProviderRealmFactory;
   codexModel: string;
 }>): Promise<DualProviderQualificationEvidence> {
-  const root = await mkdtemp(join(tmpdir(), "wsr-dual-provider-qualification-"));
+  const root = await mkdtemp(join(tmpdir(), "crystra-dual-provider-qualification-"));
   try {
     const worktreeCandidate = join(root, "worktree"); const instructionsDirectory = join(root, "instructions"); const stateDirectory = join(root, "codex-state");
     await mkdir(worktreeCandidate); await mkdir(instructionsDirectory); await mkdir(stateDirectory);

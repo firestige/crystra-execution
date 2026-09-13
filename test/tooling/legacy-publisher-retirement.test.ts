@@ -18,7 +18,7 @@ describe("legacy DSH publisher retirement", () => {
       "scripts/materialize-unified-release-candidate.ts",
     ].map((file) => readFile(path.join(repository, file), "utf8")));
 
-    expect(activeReleaseFiles.join("\n")).not.toContain("wsr-dsh-intake");
+    expect(activeReleaseFiles.join("\n")).not.toContain("crystra-execution-intake-internal");
     expect(activeReleaseFiles.join("\n")).not.toContain("npm-pair");
   });
 
@@ -32,14 +32,14 @@ describe("legacy DSH publisher retirement", () => {
       "docs/assets/architecture.svg",
     ].map((file) => readFile(path.join(repository, file), "utf8")));
 
-    expect(entryPoints.join("\n")).not.toContain("wsr-dsh-intake");
-    expect(entryPoints.join("\n")).toContain("dsh-wsr-execution");
+    expect(entryPoints.join("\n")).not.toContain("crystra-execution-intake-internal");
+    expect(entryPoints.join("\n")).toContain("dsh-crystra");
   });
 
   it("labels retained legacy source as compatibility-only and non-publishable", async () => {
     const marker = await readFile(path.join(repository, "packages/dsh-intake/LEGACY.md"), "utf8");
     expect(marker).toContain("Historical compatibility source");
-    expect(marker).toContain("dsh-wsr-execution");
+    expect(marker).toContain("dsh-crystra");
     expect(marker).toContain("must not be published");
   });
 

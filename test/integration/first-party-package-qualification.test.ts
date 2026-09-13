@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repositoryRoot = path.dirname(fileURLToPath(new URL("../..", import.meta.url)));
-const contractRoot = path.join(repositoryRoot, "system-contracts/workflow-dsl-2-candidate/generated");
+const repositoryRoot = path.join(fileURLToPath(new URL("../../", import.meta.url)), ".crystra-inputs");
+const contractRoot = path.join(repositoryRoot, "contracts/workflow-dsl-2-candidate/generated");
 
 function qualify(definition: string, root = repositoryRoot) {
   return spawnSync(process.execPath, [

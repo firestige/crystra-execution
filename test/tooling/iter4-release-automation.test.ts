@@ -33,7 +33,7 @@ describe("Iteration 4 release automation", () => {
     expect(isChangelogMetaCommit(["CHANGELOG.md"])).toBe(true);
     expect(isChangelogMetaCommit([
       "release/candidates/iter4-wave11/release-metadata.json",
-      "release/candidates/iter4-wave11/wsr-execution-0.1.3.tgz",
+      "release/candidates/iter4-wave11/crystra-execution-0.1.3.tgz",
     ])).toBe(true);
     expect(isChangelogMetaCommit([
       "release/candidates/iter4-wave11/release-metadata.json",
@@ -57,12 +57,12 @@ describe("Iteration 4 release automation", () => {
 
     expect(() => assertReleaseConfiguration(config)).not.toThrow();
     expect(config).toMatchObject({
-      schemaVersion: "wsr.release-component@1.0.0",
-      repository: "firestige/wsr-execution",
+      schemaVersion: "crystra.release-component@1.0.0",
+      repository: "firestige/crystra-execution",
       releaseBranch: "main",
       triggerBranch: "release/next",
       assetMode: "npm-package",
-      publisherAdapter: "npm-package+github-release",
+      publisherAdapter: "github-release-tarball",
       stablePolicy: "qualified-candidate-exact-assets",
     });
   });
@@ -74,11 +74,11 @@ describe("Iteration 4 release automation", () => {
 
     expect(() => assertCapabilityMatrix(matrix)).not.toThrow();
     expect(matrix.components).toEqual(expect.arrayContaining([
-      expect.objectContaining({ repository: "firestige/wsr-evidence", assetMode: "python-wheel-sdist+oci" }),
-      expect.objectContaining({ repository: "firestige/wsr-evolution", releaseMode: "parameter-only" }),
+      expect.objectContaining({ repository: "firestige/crystra-evidence", assetMode: "python-wheel-sdist+oci" }),
+      expect.objectContaining({ repository: "firestige/crystra-evolution", releaseMode: "parameter-only" }),
       expect.objectContaining({ repository: "firestige/bi", releaseMode: "excluded" }),
     ]));
-    expect(matrix.components.find((item: { repository: string }) => item.repository === "firestige/wsr-evidence").publisherAdapter)
+    expect(matrix.components.find((item: { repository: string }) => item.repository === "firestige/crystra-evidence").publisherAdapter)
       .not.toContain("npm");
   });
 
@@ -86,14 +86,14 @@ describe("Iteration 4 release automation", () => {
     const packageVersion = JSON.parse(await readFile(path.join(repository, "package.json"), "utf8")).version;
     await expect(assertExecutionReleaseCoordinates(repository)).resolves.toBe(packageVersion);
 
-    const core = { name: "wsr-execution", version: "0.1.3" };
+    const core = { name: "crystra-execution", version: "0.1.3" };
     expect(() => assertExecutionReleaseCoordinates({
       core: { ...core, name: "unexpected" }, workflow: "VERSION=dynamic",
     }))
       .toThrowError("RELEASE_PACKAGE_VERSION_MISMATCH");
     expect(() => assertExecutionReleaseCoordinates({
       core,
-      workflow: "wsr-execution-0.1.3.tgz",
+      workflow: "crystra-execution-0.1.3.tgz",
     })).toThrowError("RELEASE_WORKFLOW_VERSION_HARDCODED");
   });
 
@@ -118,19 +118,19 @@ describe("Iteration 4 release automation", () => {
 
   it("publishes only core and resumes only an exact already-published coordinate", async () => {
     const artifact = {
-      package: "wsr-execution", version: "0.1.3", file: "wsr-execution-0.1.3.tgz", sha256: "sha256:" + "a".repeat(64),
+      package: "crystra-execution", version: "0.1.3", file: "crystra-execution-0.1.3.tgz", sha256: "sha256:" + "a".repeat(64),
     } as const;
     const absent = async (): Promise<RegistryVersion | null> => null;
 
     await expect(planNpmCorePublication(artifact, absent)).resolves.toEqual(
-      { action: "publish", package: "wsr-execution", file: "wsr-execution-0.1.3.tgz" },
+      { action: "publish", package: "crystra-execution", file: "crystra-execution-0.1.3.tgz" },
     );
 
     const coreAlreadyPublished = async (): Promise<RegistryVersion> => (
       { sha256: artifact.sha256, description: "core" }
     );
     await expect(planNpmCorePublication(artifact, coreAlreadyPublished)).resolves.toEqual(
-      { action: "skip-exact", package: "wsr-execution", file: "wsr-execution-0.1.3.tgz" },
+      { action: "skip-exact", package: "crystra-execution", file: "crystra-execution-0.1.3.tgz" },
     );
 
     const collision = async (): Promise<RegistryVersion> => ({
@@ -146,7 +146,7 @@ describe("Iteration 4 release automation", () => {
       versions: ["0.1.1", "0.1.2", "0.1.3"],
     });
     await expect(verifyPublishedNpmCore(artifact, exact)).resolves.toEqual({
-      version: "0.1.3", package: "wsr-execution",
+      version: "0.1.3", package: "crystra-execution",
     });
     let attempts = 0;
     await expect(waitForPublishedNpmCore(artifact, async () => {
@@ -173,14 +173,14 @@ describe("Iteration 4 release automation", () => {
 
     expect(candidate).not.toContain("fix/iter3-interactive-intake-e2e");
     expect(candidate).toContain('test "$GITHUB_REF_NAME" = "release/next"');
-    expect(candidate).toContain("WSR_RELEASE_CLIENT_ID");
-    expect(candidate).not.toContain("WSR_RELEASE_APP_ID");
-    expect(candidate).toContain("WSR_RELEASE_APP_PRIVATE_KEY");
-    expect(candidate).toContain("repositories: wsr-execution");
+    expect(candidate).toContain("CRYSTRA_RELEASE_CLIENT_ID");
+    expect(candidate).not.toContain("CRYSTRA_RELEASE_APP_ID");
+    expect(candidate).toContain("CRYSTRA_RELEASE_APP_PRIVATE_KEY");
+    expect(candidate).toContain("repositories: crystra-execution");
     expect(candidate).toContain("permission-contents: write");
     expect(candidate).toContain("permission-workflows: write");
     expect(candidate.indexOf("actions/create-github-app-token@"))
-      .toBeGreaterThan(candidate.indexOf("Materialize and verify exact unified-candidate artifacts"));
+      .toBeGreaterThan(candidate.indexOf("Build and verify this component's exact artifacts"));
     expect(candidate.indexOf("actions/create-github-app-token@"))
       .toBeLessThan(candidate.indexOf("Create or resume RC with exact local assets"));
     expect(candidate).toContain("GH_TOKEN: ${{ steps.release-app-token.outputs.token }}");
@@ -189,39 +189,39 @@ describe("Iteration 4 release automation", () => {
     expect(candidate).toContain("steps.request.outputs.candidate_tag");
     expect(candidate).toContain("steps.candidate.outputs.exists");
     expect(candidate).toContain('gh release download "$CANDIDATE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$NAME"');
-    expect(candidate).toContain("authority_manifest");
-    expect(candidate).toContain("materialize-unified-release-candidate.ts");
-    expect(candidate).not.toContain('pnpm release:artifacts "$RUNNER_TEMP/local-release"');
+    expect(candidate).not.toContain("authority_manifest");
+    expect(candidate).not.toContain("materialize-unified-release-candidate.ts");
+    expect(candidate).toContain('pnpm release:artifacts "$RUNNER_TEMP/local-release"');
     expect(promote).toContain("actions/create-github-app-token@");
-    expect(promote).toContain("WSR_RELEASE_CLIENT_ID");
-    expect(promote).not.toContain("WSR_RELEASE_APP_ID");
-    expect(promote).toContain("WSR_RELEASE_APP_PRIVATE_KEY");
-    expect(promote).toContain("repositories: wsr-execution");
+    expect(promote).toContain("CRYSTRA_RELEASE_CLIENT_ID");
+    expect(promote).not.toContain("CRYSTRA_RELEASE_APP_ID");
+    expect(promote).toContain("CRYSTRA_RELEASE_APP_PRIVATE_KEY");
+    expect(promote).toContain("repositories: crystra-execution");
     expect(promote).toContain("permission-contents: write");
     expect(promote).toContain("permission-workflows: write");
-    expect(promote.indexOf("actions/create-github-app-token@"))
-      .toBeGreaterThan(promote.indexOf("Publish exact qualified npm package before stable"));
+    expect(promote).not.toContain("npm publish");
+    expect(promote).not.toContain("release:publish-npm");
     expect(promote).toContain("GH_TOKEN: ${{ steps.release-app-token.outputs.token }}");
   });
 
   it("materializes only exact Execution bytes bound by the unified candidate", async () => {
-    const superproject = await mkdtemp(path.join(tmpdir(), "wsr-unified-candidate-"));
+    const superproject = await mkdtemp(path.join(tmpdir(), "crystra-unified-candidate-"));
     const candidate = path.join(superproject, "execution-system/release/candidates/wave11");
     const destination = path.join(superproject, "output");
     await mkdir(candidate, { recursive: true });
     await writeFile(path.join(candidate, "release-metadata.json"), "metadata\n");
     await writeFile(path.join(candidate, "release-notes.md"), "notes\n");
-    await writeFile(path.join(candidate, "wsr-execution-0.1.3.tgz"), "core");
+    await writeFile(path.join(candidate, "crystra-execution-0.1.3.tgz"), "core");
     await writeFile(path.join(candidate, "publication.json"), "publication\n");
     const digest = (value: string): string => `sha256:${createHash("sha256").update(value).digest("hex")}`;
     const manifest = {
-      schema_version: "wsr.iter4-unified-candidate@1.0.0",
+      schema_version: "crystra.iter4-unified-candidate@1.0.0",
       status: "IMMUTABLE_RELEASE_CANDIDATE",
       execution: {
         metadata: { path: "execution-system/release/candidates/wave11/release-metadata.json", sha256: digest("metadata\n") },
         release_notes: { path: "execution-system/release/candidates/wave11/release-notes.md", sha256: digest("notes\n") },
         artifacts: [
-          { package: "wsr-execution", version: "0.1.3", path: "execution-system/release/candidates/wave11/wsr-execution-0.1.3.tgz", sha256: digest("core") },
+          { package: "crystra-execution", version: "0.1.3", path: "execution-system/release/candidates/wave11/crystra-execution-0.1.3.tgz", sha256: digest("core") },
         ],
       },
     };
@@ -234,12 +234,12 @@ describe("Iteration 4 release automation", () => {
       version: "0.1.3",
       artifactCount: 1,
     });
-    await expect(readFile(path.join(destination, "wsr-execution-0.1.3.tgz"), "utf8")).resolves.toBe("core");
-    await writeFile(path.join(candidate, "wsr-execution-0.1.3.tgz"), "tampered");
+    await expect(readFile(path.join(destination, "crystra-execution-0.1.3.tgz"), "utf8")).resolves.toBe("core");
+    await writeFile(path.join(candidate, "crystra-execution-0.1.3.tgz"), "tampered");
     await expect(materializeUnifiedCandidate(superproject, manifestPath, path.join(superproject, "tampered-output")))
       .rejects.toThrowError("UNIFIED_CANDIDATE_DIGEST_MISMATCH");
 
-    await writeFile(path.join(candidate, "wsr-execution-0.1.3.tgz"), "core");
+    await writeFile(path.join(candidate, "crystra-execution-0.1.3.tgz"), "core");
     await writeFile(manifestPath, JSON.stringify({ ...manifest, execution: { ...manifest.execution, metadata: null } }));
     await expect(materializeUnifiedCandidate(superproject, manifestPath, path.join(superproject, "invalid-output")))
       .rejects.toThrowError("UNIFIED_CANDIDATE_INVALID");
@@ -346,17 +346,16 @@ describe("Iteration 4 release automation", () => {
   it("covers package-manager installation policy and executes the source-publication guards", async () => {
     const workspace = await readFile(path.join(repository, "pnpm-workspace.yaml"), "utf8");
     expect(workspace).toContain('"better-sqlite3": true');
-    expect(workspace).toContain("minimumReleaseAgeExclude:");
-    expect(workspace).toContain("wsr-execution@0.1.4");
+    expect(workspace).not.toContain("minimumReleaseAgeExclude:");
 
     const cleanEnvironment = { ...process.env };
-    delete cleanEnvironment.WSR_RELEASE_PACK_MODE;
+    delete cleanEnvironment.CRYSTRA_RELEASE_PACK_MODE;
     expect(() => execFileSync("pnpm", ["release:prepack-guard"], {
       cwd: repository, env: cleanEnvironment, stdio: "pipe",
     })).toThrow();
     expect(() => execFileSync("pnpm", ["release:prepack-guard"], {
       cwd: repository,
-      env: { ...cleanEnvironment, WSR_RELEASE_PACK_MODE: "verified-builder" },
+      env: { ...cleanEnvironment, CRYSTRA_RELEASE_PACK_MODE: "verified-builder" },
       stdio: "pipe",
     })).not.toThrow();
     expect(() => execFileSync("pnpm", ["release:prepublish-guard"], {

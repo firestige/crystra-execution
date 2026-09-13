@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { compileRunnerActivation } from "../../src/interpreter/compile-runner-activation.js";
 import { buildFirstPartyCompileActivation } from "../support/wave4/first-party-package-activation.js";
 
-const repositoryRoot = path.dirname(fileURLToPath(new URL("../..", import.meta.url)));
+const repositoryRoot = path.join(fileURLToPath(new URL("../../", import.meta.url)), ".crystra-inputs");
 const roots: string[] = [];
 
 async function workspace(): Promise<string> {

@@ -4,17 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       candidate_tag:
-        description: Qualified RC tag, for example 0.1.1-rc.1
+        description: Qualified RC tag, for example crystra-execution-v0.1.0-rc.1
         required: true
         type: string
       final_tag:
-        description: Stable final tag, for example 0.1.1
+        description: Stable final tag, for example crystra-execution-v0.1.0
         required: true
         type: string
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: execution-release-promotion
@@ -45,7 +44,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
-          registry-url: https://registry.npmjs.org
           package-manager-cache: false
 
       - name: Set up pnpm
@@ -62,7 +60,7 @@ jobs:
           CANDIDATE_TAG: ${{ inputs.candidate_tag }}
         run: |
           mkdir "$RUNNER_TEMP/qualified-release"
-          gh release download "$CANDIDATE_TAG" --dir "$RUNNER_TEMP/qualified-release"
+          gh release download "$CANDIDATE_TAG" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/qualified-release"
           pnpm release:verify "$RUNNER_TEMP/qualified-release"
 
       - name: Enforce final-tag eligibility
@@ -73,7 +71,7 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "${{ steps.candidate.outputs.sha }}"
           pnpm release:policy promote "$FINAL_TAG" "$RUNNER_TEMP/qualified-release/release-qualification.json" "$(git rev-parse HEAD)" "$CANDIDATE_TAG"
-          if gh release view "$FINAL_TAG" >/dev/null 2>&1; then
+          if gh release view "$FINAL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "final tag already exists" >&2
             exit 1
           fi
@@ -82,19 +80,14 @@ jobs:
             exit 1
           fi
 
-      - name: Publish exact qualified npm package before stable
-        run: |
-          node -e 'const [major,minor]=process.argv[1].split(".").map(Number); if(major<11||(major===11&&minor<5)) process.exit(1)' "$(npm --version)"
-          pnpm release:publish-npm "$RUNNER_TEMP/qualified-release" --execute
-
       - name: Mint short-lived release App token for final publish only
         id: release-app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ vars.WSR_RELEASE_CLIENT_ID }}
-          private-key: ${{ secrets.WSR_RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.CRYSTRA_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.CRYSTRA_RELEASE_APP_PRIVATE_KEY }}
           owner: firestige
-          repositories: wsr-execution
+          repositories: crystra-execution
           permission-contents: write
           permission-workflows: write
 
@@ -103,7 +96,7 @@ jobs:
           GH_TOKEN: ${{ steps.release-app-token.outputs.token }}
           FINAL_TAG: ${{ inputs.final_tag }}
         run: |
-          gh release create "$FINAL_TAG" "$RUNNER_TEMP/qualified-release/"* \
+          gh release create "$FINAL_TAG" --repo "$GITHUB_REPOSITORY" "$RUNNER_TEMP/qualified-release/"* \
             --target "$(git rev-parse HEAD)" \
             --title "Execution System $FINAL_TAG" \
             --notes-file "$RUNNER_TEMP/qualified-release/release-notes.md"

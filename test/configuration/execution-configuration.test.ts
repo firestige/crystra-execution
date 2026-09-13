@@ -50,8 +50,8 @@ function input(paths: Awaited<ReturnType<typeof deployment>>) {
     },
     workflowSource: {
       kind: "github",
-      repository: "firestige/wsr-workflow-package",
-      releasesBaseUrl: "https://api.github.com/repos/firestige/wsr-workflow-package/releases",
+      repository: "firestige/crystra-workflow-package",
+      releasesBaseUrl: "https://api.github.com/repos/firestige/crystra-workflow-package/releases",
       assetPattern: "workflow-package-{name}-{version}.tar.gz",
     },
     runner: {
@@ -73,7 +73,7 @@ function input(paths: Awaited<ReturnType<typeof deployment>>) {
       maxBatchBytes: 4194304,
       flushIntervalMs: 1000,
       shutdownFlushMs: 3000,
-      serviceName: "workflow-self-recursive-execution",
+      serviceName: "crystra-execution",
     },
     controls: {
       startupTimeoutMs: 30000,

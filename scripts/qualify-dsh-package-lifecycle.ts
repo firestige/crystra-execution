@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 import { bindLocalPackageCandidate, ensureDshProfileInstallationPolicy } from "./dsh-profile-installation.js";
 
 const require = createRequire(import.meta.url);
-const PACKAGE_NAME = "wsr-dsh-intake";
+const PACKAGE_NAME = "crystra-execution-intake-internal";
 const repository = path.resolve(import.meta.dirname, "..");
 const coreVersion = (require(path.join(repository, "package.json")) as { readonly version: string }).version;
 
@@ -147,11 +147,11 @@ export async function qualifyDshPackageLifecycle(
       writeFile(manifestFile, manifestBytes),
     ]);
 
-    // The Intake plugin declares `wsr-execution` as a dependency, whose
+    // The Intake plugin declares `crystra-execution` as a dependency, whose
     // better-sqlite3 native build must be approved in the profile before any
     // install (mirrors the documented `dsh plugin config set allowBuilds` step).
     await ensureDshProfileInstallationPolicy(profile, (args) => invokeDsh(executable, dshHome, profile, args.slice(3)));
-    await bindLocalPackageCandidate(profileDirectory, "wsr-execution", coreVersion, coreArchive);
+    await bindLocalPackageCandidate(profileDirectory, "crystra-execution", coreVersion, coreArchive);
 
     invokeDsh(executable, dshHome, profile, ["add", "--workspace-root", oldArchive]);
     const installedVersions = [await installedVersion(profileDirectory)];

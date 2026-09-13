@@ -11,6 +11,3 @@ allowBuilds:
   "koffi": true
   "node-pty": true
   "protobufjs": true
-
-minimumReleaseAgeExclude:
-  - wsr-execution@0.1.4

@@ -1,7 +1,7 @@
-const USAGE = "Usage: /wsr list | create <selector> | recover [delivery-id] | status [delivery-id] | action finish. Usage: /wsr abandon [delivery-id]";
+const USAGE = "Usage: /crystra list | create <selector> | recover [delivery-id] | status [delivery-id] | action finish. Usage: /crystra abandon [delivery-id]";
 
 function invalid() {
-  throw Object.assign(new TypeError(`WSR_COMMAND_INVALID. ${USAGE}`), { code: "WSR_COMMAND_INVALID" });
+  throw Object.assign(new TypeError(`CRYSTRA_COMMAND_INVALID. ${USAGE}`), { code: "CRYSTRA_COMMAND_INVALID" });
 }
 
 function split(value) {
@@ -13,7 +13,7 @@ function split(value) {
   return { line, remainder };
 }
 
-export function parseWsrCommand(value) {
+export function parseCrystraCommand(value) {
   const { line, remainder } = split(value);
   if (line === "list") {
     if (remainder !== undefined) invalid();
@@ -44,7 +44,7 @@ export function parseWsrCommand(value) {
   if (line.startsWith("create ")) {
     const selector = line.slice(7);
     if (selector.length === 0 || selector.includes(" ") || selector.startsWith("-") || selector.includes("--intent")) invalid();
-    return Object.freeze({ operation: "create", selector, directive: `/wsr create ${selector}`, ...(remainder === undefined ? {} : { remainder }) });
+    return Object.freeze({ operation: "create", selector, directive: `/crystra create ${selector}`, ...(remainder === undefined ? {} : { remainder }) });
   }
   return invalid();
 }

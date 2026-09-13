@@ -14,7 +14,7 @@ function packCore(destination: string): string {
   const output = execFileSync("npm", ["pack", "--silent", "--pack-destination", destination], {
     cwd: repository,
     encoding: "utf8",
-    env: { ...process.env, WSR_RELEASE_PACK_MODE: "verified-builder" },
+    env: { ...process.env, CRYSTRA_RELEASE_PACK_MODE: "verified-builder" },
   }).trim();
   return path.join(destination, output.split("\n").at(-1)!);
 }
@@ -30,9 +30,9 @@ async function packPlugin(root: string, version: string): Promise<string> {
   execFileSync("npm", ["pack", "--silent", "--pack-destination", destination], {
     cwd: source,
     stdio: "pipe",
-    env: { ...process.env, WSR_RELEASE_PACK_MODE: "verified-builder" },
+    env: { ...process.env, CRYSTRA_RELEASE_PACK_MODE: "verified-builder" },
   });
-  return path.join(destination, `wsr-dsh-intake-${version}.tgz`);
+  return path.join(destination, `crystra-execution-intake-internal-${version}.tgz`);
 }
 
 describe("DSH package lifecycle qualification", () => {

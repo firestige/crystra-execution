@@ -104,7 +104,7 @@ async function connectCdp(url: string): Promise<CdpConnection> {
 }
 
 function chromeExecutable(): string {
-  if (process.env.WSR_CHROME_PATH !== undefined) return path.resolve(process.env.WSR_CHROME_PATH);
+  if (process.env.CRYSTRA_CHROME_PATH !== undefined) return path.resolve(process.env.CRYSTRA_CHROME_PATH);
   if (process.platform === "darwin") return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
   return "google-chrome";
 }
@@ -230,12 +230,12 @@ export async function qualifyDshInteractiveIntake(input: Readonly<{
       },
       workflowSource: {
         kind: "github",
-        repository: "firestige/wsr-workflow-package",
-        releasesBaseUrl: "https://api.github.com/repos/firestige/wsr-workflow-package/releases",
+        repository: "firestige/crystra-workflow-package",
+        releasesBaseUrl: "https://api.github.com/repos/firestige/crystra-workflow-package/releases",
         assetPattern: "workflow-package-{name}-{version}.tar.gz",
       },
       runner: { implementationKey: "runner.v2", host: { engine: "langgraph" }, maxParallelToolCalls: 4 },
-      observation: { enabled: false, timeoutMs: 1000, maxBatchRecords: 512, maxBatchBytes: 4_194_304, flushIntervalMs: 1000, shutdownFlushMs: 3000, serviceName: "workflow-self-recursive-execution" },
+      observation: { enabled: false, timeoutMs: 1000, maxBatchRecords: 512, maxBatchBytes: 4_194_304, flushIntervalMs: 1000, shutdownFlushMs: 3000, serviceName: "crystra-execution" },
       controls: { startupTimeoutMs: 30_000, executionTimeoutMs: 3_600_000, shutdownTimeoutMs: 10_000, maxConcurrentDeliveries: 4, allowExplicitRefresh: false, diagnosticMaxBytes: 4096 },
       intake: { maxCorrelationBytes: 256, maxOutputBytes: 8192 },
     };
@@ -243,7 +243,7 @@ export async function qualifyDshInteractiveIntake(input: Readonly<{
     await ensureDshProfileInstallationPolicy("web", (args) => runDsh(dshHome, worktree, args));
     await bindLocalPackageCandidate(
       path.join(dshHome, "profiles/web"),
-      "wsr-execution",
+      "crystra-execution",
       coreVersion,
       coreArchive,
     );
@@ -267,10 +267,10 @@ export async function qualifyDshInteractiveIntake(input: Readonly<{
     const browser = await launchBrowser(root, webUrl);
     chrome = browser.child;
     cdp = browser.cdp;
-    await evaluate(cdp, `window.__wsrObservedKinds = []; new MutationObserver(() => {
-      for (const element of document.querySelectorAll('[data-wsr-kind]')) {
-        const kind = element.getAttribute('data-wsr-kind');
-        if (kind && !window.__wsrObservedKinds.includes(kind)) window.__wsrObservedKinds.push(kind);
+    await evaluate(cdp, `window.__crystraObservedKinds = []; new MutationObserver(() => {
+      for (const element of document.querySelectorAll('[data-crystra-kind]')) {
+        const kind = element.getAttribute('data-crystra-kind');
+        if (kind && !window.__crystraObservedKinds.includes(kind)) window.__crystraObservedKinds.push(kind);
       }
     }).observe(document.documentElement, { childList: true, subtree: true, attributes: true }); true`);
     await waitFor(async () => {
@@ -326,83 +326,83 @@ export async function qualifyDshInteractiveIntake(input: Readonly<{
       return listed.ok === true && typeof id === "string" ? id : undefined;
     }, "DSH_BROWSER_SESSION_CREATE_FAILED");
     const catalog = await rpc(webUrl, "commands/list", { args: { agentId: sessionId } });
-    if (catalog.ok !== true || !catalog.value?.some((entry: any) => entry.name === "wsr")) throw new Error("DSH_WSR_COMMAND_MISSING");
+    if (catalog.ok !== true || !catalog.value?.some((entry: any) => entry.name === "crystra")) throw new Error("DSH_CRYSTRA_COMMAND_MISSING");
     await waitFor(async () => await evaluate(cdp!, `(() => {
-      const button = [...document.querySelectorAll('[data-wsr-sidebar="true"] button')]
+      const button = [...document.querySelectorAll('[data-crystra-sidebar="true"] button')]
         .find((candidate) => candidate.textContent?.trim() === 'Deliveries');
       if (!button) return false;
       button.click();
       return true;
-    })()`) === true ? true : undefined, "DSH_WSR_LIST_TAB_UNAVAILABLE");
+    })()`) === true ? true : undefined, "DSH_CRYSTRA_LIST_TAB_UNAVAILABLE");
     const history = await waitFor(async () => {
       const candidate = await rpc(webUrl, "session.history", { sessionId });
       const commandEvents = candidate.value?.events?.filter((entry: any) => entry.event.type.startsWith("command/"));
       return candidate.ok === true && commandEvents?.length === 2 ? candidate : undefined;
-    }, "DSH_WSR_COMMAND_FAILED", 40_000);
+    }, "DSH_CRYSTRA_COMMAND_FAILED", 40_000);
     const events = history.value.events.filter((entry: any) => entry.event.type.startsWith("command/"));
     let commandPresentation: any;
     try { commandPresentation = JSON.parse(events[1]?.event?.data?.text); } catch { /* checked below */ }
     if (JSON.stringify(events.map((entry: any) => entry.event.type)) !== JSON.stringify(["command/run", "command/done"])
-      || commandPresentation?.schemaVersion !== "wsr.presentation@1.0.0"
+      || commandPresentation?.schemaVersion !== "crystra.presentation@1.0.0"
       || commandPresentation?.kind !== "delivery-list" || !Array.isArray(commandPresentation?.data?.items)) {
-      throw new Error(`DSH_WSR_RESULT_NOT_DURABLE:${JSON.stringify(events)}`);
+      throw new Error(`DSH_CRYSTRA_RESULT_NOT_DURABLE:${JSON.stringify(events)}`);
     }
     let presentation: any;
     try {
       presentation = await waitFor(async () => {
         const value = await evaluate(cdp!, `(() => {
-          const element = [...document.querySelectorAll('[data-wsr-presentation="true"]')].at(-1);
+          const element = [...document.querySelectorAll('[data-crystra-presentation="true"]')].at(-1);
           if (!element) return null;
           return {
-            version: element.getAttribute('data-wsr-version'),
-            kind: element.getAttribute('data-wsr-kind'),
+            version: element.getAttribute('data-crystra-version'),
+            kind: element.getAttribute('data-crystra-kind'),
             text: element.textContent,
-            observedKinds: window.__wsrObservedKinds,
+            observedKinds: window.__crystraObservedKinds,
           };
         })()`);
-        if (value?.version !== "wsr.presentation@1.0.0" || value?.kind !== "delivery-list"
+        if (value?.version !== "crystra.presentation@1.0.0" || value?.kind !== "delivery-list"
           || typeof value?.text !== "string" || !value.text.includes("No Workflow Deliveries")) return undefined;
         return value;
-      }, "DSH_WSR_BROWSER_PRESENTATION_MISSING");
+      }, "DSH_CRYSTRA_BROWSER_PRESENTATION_MISSING");
     } catch (cause) {
       const diagnostic = await evaluate(cdp, `({
         location: location.href,
         text: document.body?.innerText?.slice(0, 4000),
         html: document.body?.innerHTML?.slice(0, 4000),
-        observedKinds: window.__wsrObservedKinds,
+        observedKinds: window.__crystraObservedKinds,
         pluginResources: performance.getEntriesByType('resource').map((entry) => entry.name).filter((name) => name.includes('/plugins/')),
       })`);
-      throw new Error(`DSH_WSR_BROWSER_PRESENTATION_MISSING:${JSON.stringify({ ...diagnostic, durableEvents: events, cdpEvents: cdp.events.slice(-20) })}`, { cause });
+      throw new Error(`DSH_CRYSTRA_BROWSER_PRESENTATION_MISSING:${JSON.stringify({ ...diagnostic, durableEvents: events, cdpEvents: cdp.events.slice(-20) })}`, { cause });
     }
     if (!presentation.observedKinds.includes("delivery-list")) {
-      throw new Error(`DSH_WSR_BROWSER_LIFECYCLE_MISSING:${JSON.stringify(presentation.observedKinds)}`);
+      throw new Error(`DSH_CRYSTRA_BROWSER_LIFECYCLE_MISSING:${JSON.stringify(presentation.observedKinds)}`);
     }
     await waitFor(async () => await evaluate(cdp!, `(() => {
-      const button = [...document.querySelectorAll('[data-wsr-sidebar="true"] button')]
+      const button = [...document.querySelectorAll('[data-crystra-sidebar="true"] button')]
         .find((candidate) => candidate.textContent?.trim() === 'Current status');
       if (!button) return false;
       button.click();
       return true;
-    })()`) === true ? true : undefined, "DSH_WSR_STATUS_TAB_UNAVAILABLE");
+    })()`) === true ? true : undefined, "DSH_CRYSTRA_STATUS_TAB_UNAVAILABLE");
     const errorHistory = await waitFor(async () => {
       const candidate = await rpc(webUrl, "session.history", { sessionId });
       const commandEvents = candidate.value?.events?.filter((entry: any) => entry.event.type.startsWith("command/"));
       return candidate.ok === true && commandEvents?.length === 4 ? candidate : undefined;
-    }, "DSH_WSR_ERROR_COMMAND_FAILED", 40_000);
+    }, "DSH_CRYSTRA_ERROR_COMMAND_FAILED", 40_000);
     const errorDone = errorHistory.value.events.filter((entry: any) => entry.event.type === "command/done").at(-1);
     let errorEnvelope: any;
     try { errorEnvelope = JSON.parse(errorDone?.event?.data?.text); } catch { /* checked below */ }
-    if (errorEnvelope?.schemaVersion !== "wsr.presentation@1.0.0" || errorEnvelope?.kind !== "error"
-      || errorEnvelope?.data?.code !== "DELIVERY_UNKNOWN") throw new Error("DSH_WSR_ERROR_NOT_DURABLE");
+    if (errorEnvelope?.schemaVersion !== "crystra.presentation@1.0.0" || errorEnvelope?.kind !== "error"
+      || errorEnvelope?.data?.code !== "DELIVERY_UNKNOWN") throw new Error("DSH_CRYSTRA_ERROR_NOT_DURABLE");
     const errorPresentation = await waitFor(async () => {
       const value = await evaluate(cdp!, `(() => {
-        const element = [...document.querySelectorAll('[data-wsr-sidebar="true"][data-wsr-presentation="true"]')].at(-1);
+        const element = [...document.querySelectorAll('[data-crystra-sidebar="true"][data-crystra-presentation="true"]')].at(-1);
         if (!element) return null;
-        return { version: element.getAttribute('data-wsr-version'), kind: element.getAttribute('data-wsr-kind'), text: element.textContent };
+        return { version: element.getAttribute('data-crystra-version'), kind: element.getAttribute('data-crystra-kind'), text: element.textContent };
       })()`);
-      return value?.version === "wsr.presentation@1.0.0" && value?.kind === "error"
+      return value?.version === "crystra.presentation@1.0.0" && value?.kind === "error"
         && typeof value?.text === "string" && value.text.includes("DELIVERY_UNKNOWN") ? value : undefined;
-    }, "DSH_WSR_BROWSER_ERROR_PRESENTATION_MISSING");
+    }, "DSH_CRYSTRA_BROWSER_ERROR_PRESENTATION_MISSING");
     const alternateWorktree = path.join(root, "alternate-worktree");
     await mkdir(alternateWorktree);
     const alternateWorkspace = await rpc(webUrl, "workspace.create", { path: alternateWorktree });
@@ -416,8 +416,8 @@ export async function qualifyDshInteractiveIntake(input: Readonly<{
       return response.result?.value === "complete" ? true : undefined;
     }, "DSH_BROWSER_SESSION_SWITCH_RELOAD_TIMEOUT");
     await dismissBlockingPrompts(cdp);
-    await waitFor(async () => await evaluate(cdp!, `document.querySelector('[data-wsr-sidebar="true"][data-wsr-presentation="true"]')?.getAttribute('data-wsr-kind') === 'error'`) === true ? true : undefined,
-      "DSH_WSR_SIDEBAR_DURABLE_RESTORE_FAILED");
+    await waitFor(async () => await evaluate(cdp!, `document.querySelector('[data-crystra-sidebar="true"][data-crystra-presentation="true"]')?.getAttribute('data-crystra-kind') === 'error'`) === true ? true : undefined,
+      "DSH_CRYSTRA_SIDEBAR_DURABLE_RESTORE_FAILED");
     try {
       await waitFor(async () => {
         const opened = await evaluate(cdp!, `(() => {
@@ -438,10 +438,10 @@ export async function qualifyDshInteractiveIntake(input: Readonly<{
       const rows = await evaluate(cdp, `[...document.querySelectorAll('[role="treeitem"],button')].map((element) => ({ text: element.textContent?.trim(), selected: element.getAttribute('aria-selected'), label: element.getAttribute('aria-label') })).filter((entry) => entry.text || entry.label)`);
       throw new Error(`DSH_BROWSER_SESSION_ROWS_UNAVAILABLE:${JSON.stringify(rows)}`, { cause });
     }
-    await waitFor(async () => await evaluate(cdp!, `document.querySelector('[data-wsr-sidebar="true"]')?.getAttribute('data-wsr-kind') === 'idle'`) === true ? true : undefined,
-      "DSH_WSR_SIDEBAR_SESSION_CLEAR_FAILED");
+    await waitFor(async () => await evaluate(cdp!, `document.querySelector('[data-crystra-sidebar="true"]')?.getAttribute('data-crystra-kind') === 'idle'`) === true ? true : undefined,
+      "DSH_CRYSTRA_SIDEBAR_SESSION_CLEAR_FAILED");
     return Object.freeze({
-      command: "/wsr list",
+      command: "/crystra list",
       result: "PASS" as const,
       oracle: "browser-dom" as const,
       presentation: Object.freeze({ version: presentation.version, kind: presentation.kind, itemCount: 0 }),

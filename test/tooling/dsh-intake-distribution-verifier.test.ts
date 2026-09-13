@@ -19,7 +19,7 @@ describe("DSH Intake distribution format verifier", () => {
     const root = await fixture();
     try {
       await expect(verifyDshIntakeDistribution(root)).resolves.toEqual({
-        packageName: "wsr-dsh-intake",
+        packageName: "crystra-execution-intake-internal",
         skillName: "workflow-execution",
         toolIdentity: "workflow_execution_intake",
         operations: ["list", "create", "recover", "status", "action-finish", "abandon"],

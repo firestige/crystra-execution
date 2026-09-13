@@ -29,12 +29,12 @@ A closed issue is not a verdict: reopening is always allowed.
 
 - **Conventional commits only** — `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`, `ci:` with an optional scope. The changelog is generated from these messages; see below.
 - **Changelog is generated, never hand-edited** — run `pnpm changelog:generate` after code changes and commit the regenerated `CHANGELOG.md` as its own commit (it is excluded from the changelog itself). `pnpm changelog:check` gates CI and rejects hand-edited drift.
-- **Release authority** — this repository publishes only `wsr-execution`. DSH bundles are independently versioned and published from `firestige/wsr-dsh`; the retained legacy source is compatibility-only.
-- **Gates before push** — `pnpm typecheck && pnpm build && pnpm test:full && pnpm check:generated && pnpm changelog:check`. DSH product qualification runs in `firestige/wsr-dsh`.
+- **Release authority** — this repository publishes only `crystra-execution`. DSH bundles are independently versioned and published from `firestige/crystra-dsh`; the retained legacy source is compatibility-only.
+- **Gates before push** — `pnpm typecheck && pnpm build && pnpm test:full && pnpm check:generated && pnpm changelog:check`. DSH product qualification runs in `firestige/crystra-dsh`.
 
 ## Release process
 
-See the [release process guide](https://github.com/firestige/workflow-self-recursive/blob/main/docs/guides/execution-release-process.md): local qualification → RC prerelease → remote verification → promote stable. The GitHub Release is the byte source of truth; the npm artifact is derived from its verified tarball, never from unverified source.
+See the [release process guide](https://github.com/firestige/crystra/blob/main/docs/guides/execution-release-process.md): local qualification → RC prerelease → remote verification → promote stable. The GitHub Release is the byte source of truth; ordinary consumers install its verified tarball.
 
 ## License
 

@@ -77,7 +77,7 @@ export function captureManagedWorkspaceTree(
   retainedObjectDirectory?: string,
   limits: ManagedWorkspaceSnapshotLimits = DEFAULT_MANAGED_WORKSPACE_SNAPSHOT_LIMITS,
 ): GitTreeId {
-  const temporary = mkdtempSync(path.join(tmpdir(), "wsr-managed-snapshot-"));
+  const temporary = mkdtempSync(path.join(tmpdir(), "crystra-managed-snapshot-"));
   const index = path.join(temporary, "index");
   const objectDirectory = retainedObjectDirectory ?? path.join(temporary, "objects");
   const environment = managedWorkspaceObjectEnvironment(repository, objectDirectory, { GIT_INDEX_FILE: index });

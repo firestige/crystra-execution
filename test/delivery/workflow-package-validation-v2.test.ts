@@ -7,8 +7,8 @@ import {
   type WorkflowPackageStaging,
 } from "../../src/delivery/index.js";
 
-const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
-const v2 = path.join(repositoryRoot, "system-contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
+const repositoryRoot = path.resolve(import.meta.dirname, "../..", ".crystra-inputs");
+const v2 = path.join(repositoryRoot, "contracts", "workflow-dsl-2-candidate", "generated", "examples", "minimal");
 
 function staging(definitionPath: string): WorkflowPackageStaging {
   return Object.freeze({

@@ -27,7 +27,7 @@ import {
 } from "../../src/delivery/index.js";
 import { AgentProviderFactoryRegistry, type AgentProviderRealmFactory } from "../../src/providers/provider.js";
 
-const repositoryRoot = path.dirname(fileURLToPath(new URL("../..", import.meta.url)));
+const repositoryRoot = path.join(fileURLToPath(new URL("../../", import.meta.url)), ".crystra-inputs");
 const roots: string[] = [];
 
 afterEach(async () => {
@@ -45,8 +45,8 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
     execFileSync("git", ["config", "user.name", "Runner Fixture"], { cwd: workspace });
     await writeFile(path.join(workspace, "README.md"), "first-party candidate\n", "utf8");
     const declaredRoles = JSON.parse(await readFile(path.join(repositoryRoot, "workflow-package/implementation/definition/roles.json"), "utf8")) as { roles: Array<{ id: string }> };
-    await mkdir(path.join(workspace, ".wsr"));
-    await writeFile(path.join(workspace, ".wsr/role-provider-bindings.json"), `${JSON.stringify({
+    await mkdir(path.join(workspace, ".crystra"));
+    await writeFile(path.join(workspace, ".crystra/role-provider-bindings.json"), `${JSON.stringify({
       schemaVersion: "execution.repository-role-provider-bindings@1.0.0",
       bindings: Object.fromEntries(declaredRoles.roles.map(({ id }) => [id, {
         agentProvider: { identity: "provider.dsh", version: "0.1.1-rc.2" },
@@ -77,15 +77,15 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
     const provenance = Buffer.from(`${JSON.stringify({
       schemaVersion: "workflow-package.provenance@1.0.0",
       subject: { name: path.basename(archivePath), sha256: archiveDigest },
-      source: { repository: "firestige/wsr-workflow-package", revision: "a".repeat(40) },
-      contract: { repository: "firestige/wsr-contracts", revision: "c".repeat(40) },
+      source: { repository: "firestige/crystra-workflow-package", revision: "a".repeat(40) },
+      contract: { repository: "firestige/crystra-contracts", revision: "c".repeat(40) },
       builder: { workflow: ".github/workflows/release-candidate.yml" },
     })}\n`);
     const provenanceDigest = `sha256:${createHash("sha256").update(provenance).digest("hex")}`;
     const source = new GitHubWorkflowPackageSource({
       kind: "github",
-      repository: "firestige/wsr-workflow-package",
-      releasesBaseUrl: "https://api.github.example.test/repos/firestige/wsr-workflow-package/releases",
+      repository: "firestige/crystra-workflow-package",
+      releasesBaseUrl: "https://api.github.example.test/repos/firestige/crystra-workflow-package/releases",
       assetPattern: "workflow-package-{name}-{version}.tar.gz",
     }, Object.freeze({ request: async (url: string) => {
       sourceCalls.push(url);
@@ -105,7 +105,7 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
         archive: { name: path.basename(archivePath), sha256: archiveDigest, bytes: archive.byteLength },
         checksum: { name: `${archiveName}.sha256` },
         provenance: { name: provenanceName, sha256: provenanceDigest },
-        contract: { repository: "firestige/wsr-contracts", revision: "c".repeat(40), minVersion: "2.0.0", maxVersion: "2.0.0" },
+        contract: { repository: "firestige/crystra-contracts", revision: "c".repeat(40), minVersion: "2.0.0", maxVersion: "2.0.0" },
       })) };
       if (url === checksumUrl) return { status: 200, body: Buffer.from(`${archiveDigest.slice(7)}  ${archiveName}\n`) };
       if (url === provenanceUrl) return { status: 200, body: provenance };
@@ -214,7 +214,7 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
       expect(result, JSON.stringify(result)).toMatchObject({ kind: "TERMINAL", deliveryId: "delivery-first-party", outcome: "FAILED" });
       expect(await slots.read(workspace)).toEqual({ state: "EMPTY", worktree: workspace });
       expect(sourceCalls).toEqual([
-        "https://api.github.example.test/repos/firestige/wsr-workflow-package/releases?per_page=100&page=1",
+        "https://api.github.example.test/repos/firestige/crystra-workflow-package/releases?per_page=100&page=1",
         descriptorUrl,
         provenanceUrl,
         checksumUrl,

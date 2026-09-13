@@ -22,7 +22,7 @@ export class IntakeSessionBindingRepository {
   detach(deliveryId: string): Promise<void>;
 }
 
-export function parseWsrCommand(value: string): Readonly<Record<string, string>>;
+export function parseCrystraCommand(value: string): Readonly<Record<string, string>>;
 export function mapIntakeToolOperation(value: unknown): Readonly<Record<string, string>>;
 export function resolveConversationWorkspace(context: unknown, agent: unknown): Promise<Readonly<{
   sessionKey: string;
@@ -30,7 +30,7 @@ export function resolveConversationWorkspace(context: unknown, agent: unknown): 
   path: string;
 }>>;
 export function recordConsumedActionReply(agent: unknown, message: unknown): void;
-export function recordWsrCommandInput(
+export function recordCrystraCommandInput(
   agent: unknown,
   rawInput: string,
   attachments?: readonly unknown[],
@@ -44,7 +44,7 @@ export function presentationForDshOperation(
   maxBytes?: number,
 ): unknown;
 export function presentToDshSession(agent: unknown, presentation: Readonly<{
-  schemaVersion: "wsr.presentation@1.0.0";
+  schemaVersion: "crystra.presentation@1.0.0";
   correlation: string;
   kind: "command-accepted" | "delivery-running" | "delivery-list" | "delivery-status" | "action-output" | "action-input-request" | "terminal-result" | "error";
   data: Readonly<Record<string, unknown>>;

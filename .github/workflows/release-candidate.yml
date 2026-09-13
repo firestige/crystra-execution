@@ -20,75 +20,51 @@ jobs:
       - name: Verify release trigger branch
         run: test "$GITHUB_REF_NAME" = "release/next"
 
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Resolve immutable release request
         id: request
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/contents/release/request.json?ref=$GITHUB_SHA" \
-            --jq .content | base64 --decode > "$RUNNER_TEMP/release-request.json"
-          CANDIDATE_TAG="$(jq -er .candidate_tag "$RUNNER_TEMP/release-request.json")"
-          AUTHORITY_REF="$(jq -er .authority_ref "$RUNNER_TEMP/release-request.json")"
-          AUTHORITY_MANIFEST="$(jq -er .authority_manifest "$RUNNER_TEMP/release-request.json")"
-          test -n "$CANDIDATE_TAG" && test -n "$AUTHORITY_REF" && test -n "$AUTHORITY_MANIFEST"
+          CANDIDATE_TAG="$(jq -er .candidate_tag release/request.json)"
+          echo "$CANDIDATE_TAG" | grep -Eq '^crystra-execution-v[0-9]+\.[0-9]+\.[0-9]+-rc\.[1-9][0-9]*$'
           echo "candidate_tag=$CANDIDATE_TAG" >> "$GITHUB_OUTPUT"
-          echo "authority_ref=$AUTHORITY_REF" >> "$GITHUB_OUTPUT"
-          echo "authority_manifest=$AUTHORITY_MANIFEST" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout super-project qualification authority workspace
-        uses: actions/checkout@v6
-        with:
-          repository: firestige/workflow-self-recursive
-          ref: ${{ steps.request.outputs.authority_ref }}
-          fetch-depth: 0
-          submodules: recursive
-
-      - name: Verify exact Execution candidate pin
-        id: authority
-        env:
-          AUTHORITY_MANIFEST: ${{ steps.request.outputs.authority_manifest }}
+      - name: Read pinned development inputs
+        id: inputs
         run: |
-          case "$AUTHORITY_MANIFEST" in release/candidates/*.json) ;; *) exit 1 ;; esac
-          ARCHIVE_COMMIT="$(jq -er .execution.candidate_archive_commit "$GITHUB_WORKSPACE/$AUTHORITY_MANIFEST")"
-          test "$(git -C execution-system rev-parse HEAD)" = "$ARCHIVE_COMMIT"
-          echo "archive_commit=$ARCHIVE_COMMIT" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout exact publisher tooling revision
+          echo "contracts_repo=$(jq -er .contracts.repository config/development-inputs.json)" >> "$GITHUB_OUTPUT"
+          echo "contracts_sha=$(jq -er .contracts.revision config/development-inputs.json)" >> "$GITHUB_OUTPUT"
+          echo "workflow_repo=$(jq -er .workflow.repository config/development-inputs.json)" >> "$GITHUB_OUTPUT"
+          echo "workflow_sha=$(jq -er .workflow.revision config/development-inputs.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out exact contract dependency
         uses: actions/checkout@v6
         with:
-          repository: firestige/wsr-execution
-          ref: ${{ github.sha }}
-          path: release-publisher
-
-      - name: Verify exact publisher tooling checkout
-        run: test "$(git -C release-publisher rev-parse HEAD)" = "$GITHUB_SHA"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
+          repository: ${{ steps.inputs.outputs.contracts_repo }}
+          ref: ${{ steps.inputs.outputs.contracts_sha }}
+          path: .crystra-inputs/contracts
+      - name: Check out exact workflow test dependency
+        uses: actions/checkout@v6
         with:
-          node-version-file: execution-system/.node-version
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+          repository: ${{ steps.inputs.outputs.workflow_repo }}
+          ref: ${{ steps.inputs.outputs.workflow_sha }}
+          path: .crystra-inputs/workflow-package
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.23.0
-
-      - name: Install exact dependencies
-        working-directory: execution-system
-        run: pnpm install --frozen-lockfile
-
-      - name: Install frozen contract checker dependencies
+      - name: Install dependencies
         run: |
-          npm --prefix system-contracts/workflow-dsl-2-candidate ci
-          npm --prefix system-contracts/observation ci
-
+          pnpm install --frozen-lockfile
+          npm --prefix .crystra-inputs/contracts/workflow-dsl-2-candidate ci --ignore-scripts
+          npm --prefix .crystra-inputs/contracts/observation ci --ignore-scripts
       - name: Validate coordinates and resolve resumable RC state
         id: candidate
-        working-directory: execution-system
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
-          RELEASE_TARGET: ${{ steps.authority.outputs.archive_commit }}
+          RELEASE_TARGET: ${{ github.sha }}
         run: |
           PACKAGE_VERSION="$(node -p 'require("./package.json").version')"
           pnpm release:policy candidate "$CANDIDATE_TAG" "$PACKAGE_VERSION"
@@ -104,8 +80,8 @@ jobs:
           fi
 
       - name: Run full component gates
-        working-directory: execution-system
         run: |
+          pnpm test:inputs
           pnpm test:full
           pnpm test:coverage
           pnpm typecheck
@@ -114,38 +90,32 @@ jobs:
           pnpm harness static
           pnpm harness feasibility
 
-      - name: Materialize and verify exact unified-candidate artifacts
-        working-directory: execution-system
+      - name: Build and verify this component's exact artifacts
         env:
-          AUTHORITY_MANIFEST: ${{ steps.request.outputs.authority_manifest }}
-          RELEASE_TARGET: ${{ steps.authority.outputs.archive_commit }}
+          RELEASE_TARGET: ${{ github.sha }}
         run: |
-          case "$AUTHORITY_MANIFEST" in release/candidates/*.json) ;; *) exit 1 ;; esac
-          CANDIDATE_DIR="$(dirname "$(jq -r .execution.metadata.path "$GITHUB_WORKSPACE/$AUTHORITY_MANIFEST")")"
           test "$(git rev-parse HEAD)" = "$RELEASE_TARGET"
-          git diff --quiet "$RELEASE_TARGET" -- "${CANDIDATE_DIR#execution-system/}"
-          node --import tsx "$GITHUB_WORKSPACE/release-publisher/scripts/materialize-unified-release-candidate.ts" \
-            "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/$AUTHORITY_MANIFEST" "$RUNNER_TEMP/local-release"
+          git diff --exit-code HEAD
+          pnpm release:artifacts "$RUNNER_TEMP/local-release"
           pnpm release:verify "$RUNNER_TEMP/local-release"
 
       - name: Mint short-lived release App token after candidate qualification
         id: release-app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ vars.WSR_RELEASE_CLIENT_ID }}
-          private-key: ${{ secrets.WSR_RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.CRYSTRA_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.CRYSTRA_RELEASE_APP_PRIVATE_KEY }}
           owner: firestige
-          repositories: wsr-execution
+          repositories: crystra-execution
           permission-contents: write
           permission-workflows: write
 
       - name: Create or resume RC with exact local assets
-        working-directory: execution-system
         env:
           GH_TOKEN: ${{ steps.release-app-token.outputs.token }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
           RC_EXISTS: ${{ steps.candidate.outputs.exists }}
-          RELEASE_TARGET: ${{ steps.authority.outputs.archive_commit }}
+          RELEASE_TARGET: ${{ github.sha }}
         run: |
           if test "$RC_EXISTS" != true; then
             gh release create "$CANDIDATE_TAG" --repo "$GITHUB_REPOSITORY" --prerelease --target "$RELEASE_TARGET" \
@@ -164,7 +134,6 @@ jobs:
           done
 
       - name: Redownload exact prerelease assets
-        working-directory: execution-system
         env:
           GH_TOKEN: ${{ steps.release-app-token.outputs.token }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
@@ -175,11 +144,10 @@ jobs:
           cmp "$RUNNER_TEMP/local-release/release-metadata.json" "$RUNNER_TEMP/remote-release/release-metadata.json"
 
       - name: Publish immutable qualification evidence to the prerelease
-        working-directory: execution-system
         env:
           GH_TOKEN: ${{ steps.release-app-token.outputs.token }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
-          RELEASE_TARGET: ${{ steps.authority.outputs.archive_commit }}
+          RELEASE_TARGET: ${{ github.sha }}
         run: |
           VERSION="$(node -p 'require("./package.json").version')"
           METADATA_SHA="sha256:$(sha256sum "$RUNNER_TEMP/remote-release/release-metadata.json" | cut -d' ' -f1)"

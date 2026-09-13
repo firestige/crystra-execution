@@ -294,7 +294,7 @@ class ProductionAgentProviderRuntimeManager implements DeliveryRuntimeFactory {
         stateDirectory: path.join(runnerRoot, "coordinator"),
         custody: Object.freeze({
           recordsDirectory: path.join(runnerRoot, "custody"),
-          publication: Object.freeze({ targetIdentity: `publication.${deliveryRoot}`, repositoryPath: manifest.canonicalWorktree, ref: `refs/heads/wsr-${deliveryRoot.slice(0, 24)}` }),
+          publication: Object.freeze({ targetIdentity: `publication.${deliveryRoot}`, repositoryPath: manifest.canonicalWorktree, ref: `refs/heads/crystra-${deliveryRoot.slice(0, 24)}` }),
         }),
         invocation: Object.freeze({ journalDirectory: path.join(runnerRoot, "journal") }),
         host: Object.freeze({ engine: "langgraph", checkpointDirectory: path.join(runnerRoot, "checkpoints") }),

@@ -28,14 +28,14 @@ export async function projectAdmittedInstructionChain(
 ): Promise<string> {
   const sections: string[] = [];
   const role = await verified(session.agent, readProjection);
-  sections.push(`<wsr-role-prompt resource="${session.agent.resourceIdentity}">`, role, "</wsr-role-prompt>");
+  sections.push(`<crystra-role-prompt resource="${session.agent.resourceIdentity}">`, role, "</crystra-role-prompt>");
   if (String(session.instructions.resourceIdentity) !== String(session.agent.resourceIdentity)) {
     const action = await verified(session.instructions, readProjection);
-    sections.push(`<wsr-action-prompt resource="${session.instructions.resourceIdentity}">`, action, "</wsr-action-prompt>");
+    sections.push(`<crystra-action-prompt resource="${session.instructions.resourceIdentity}">`, action, "</crystra-action-prompt>");
   }
   for (const skill of session.skills) {
     const text = await verified(skill, readProjection);
-    sections.push(`<wsr-skill resource="${skill.resourceIdentity}">`, text, "</wsr-skill>");
+    sections.push(`<crystra-skill resource="${skill.resourceIdentity}">`, text, "</crystra-skill>");
   }
   return sections.join("\n");
 }

@@ -26,7 +26,7 @@ const KEYS = [
 export function assertReleaseConfiguration(value: ReleaseConfiguration): void {
   if (value === null || typeof value !== "object" || Array.isArray(value)
     || Object.keys(value).sort().join(",") !== [...KEYS].sort().join(",")
-    || value.schemaVersion !== "wsr.release-component@1.0.0"
+    || value.schemaVersion !== "crystra.release-component@1.0.0"
     || !/^firestige\/[a-z0-9-]+$/u.test(value.repository)
     || value.releaseBranch !== "main"
     || !/^release\/[a-z0-9._-]+$/u.test(value.triggerBranch)

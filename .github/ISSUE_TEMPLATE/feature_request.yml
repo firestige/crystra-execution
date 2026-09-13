@@ -34,6 +34,6 @@ body:
     attributes:
       label: 属于哪个面 / Which surface
       options:
-        - label: 宿主无关核心（wsr-execution 嵌入 / CLI）
-        - label: DSH 插件入口（dsh-wsr-execution 命令 / 侧边栏 / 展示）
+        - label: 宿主无关核心（crystra-execution 嵌入 / CLI）
+        - label: DSH 插件入口（dsh-crystra 命令 / 侧边栏 / 展示）
         - label: 契约 / 文档 / 发布流程

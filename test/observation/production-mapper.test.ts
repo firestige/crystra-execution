@@ -13,7 +13,7 @@ import { createTaskBindingObservationFact } from "../../src/bootstrap/index.js";
 import type { DeliveryBoundOwnerFact } from "../../src/bootstrap/index.js";
 import { canonicalJsonBytes } from "../../src/configuration/index.js";
 
-const contractRoot = path.resolve("../system-contracts/observation");
+const contractRoot = path.resolve(".crystra-inputs/contracts/observation");
 
 function manifestProjection(deliveryId = "delivery-1", taskId = "task-1", manifestDigest = "a".repeat(64), roles: readonly Record<string, unknown>[] = []) {
   const resolvedRoles = roles.map((role) => ({

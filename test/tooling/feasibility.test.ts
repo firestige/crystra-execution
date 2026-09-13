@@ -110,7 +110,7 @@ describe("I2-G00 selected substrate matrix", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Usage: dsh");
     expect(result.stdout).toContain("--profile");
-    expect(result.stdout).not.toContain("/wsr");
+    expect(result.stdout).not.toContain("/crystra");
   });
 
   it("binds DSH headless to an explicit cwd and scoped DSH_HOME before Agent activation", () => {

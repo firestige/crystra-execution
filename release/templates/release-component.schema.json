@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workflow-self-recursive.dev/schemas/release-component-1.0.0.schema.json",
-  "title": "WSR release component configuration",
+  "title": "Crystra release component configuration",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
     "remoteInstallMode", "stablePolicy", "capabilities"
   ],
   "properties": {
-    "schemaVersion": { "const": "wsr.release-component@1.0.0" },
+    "schemaVersion": { "const": "crystra.release-component@1.0.0" },
     "repository": { "type": "string", "pattern": "^firestige/[a-z0-9-]+$" },
     "releaseBranch": { "const": "main" },
     "triggerBranch": { "type": "string", "pattern": "^release/[a-z0-9._-]+$" },

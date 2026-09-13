@@ -1,6 +1,6 @@
 {
-  "name": "wsr-execution",
-  "version": "0.2.7",
+  "name": "crystra-execution",
+  "version": "0.1.0",
   "private": false,
   "type": "module",
   "exports": {
@@ -43,7 +43,6 @@
     "release:config:verify": "node --import tsx release/cli/verify-release-config.ts",
     "release:matrix:verify": "node --import tsx release/cli/verify-release-matrix.ts",
     "release:check-coordinates": "node --import tsx release/cli/verify-execution-coordinates.ts",
-    "release:publish-npm": "node --import tsx release/cli/publish-npm-core.ts",
     "release:simulate": "node --import tsx release/cli/simulate-release-lifecycle.ts",
     "release:notes:verify": "node --import tsx release/cli/verify-release-notes.ts",
     "release:prepack-guard": "node --import tsx release/cli/prepack-guard.ts",
@@ -53,7 +52,8 @@
     "changelog:generate": "node --import tsx scripts/generate-changelog.ts",
     "changelog:check": "node --import tsx scripts/generate-changelog.ts --check",
     "prepack": "pnpm release:prepack-guard",
-    "prepublishOnly": "pnpm release:prepublish-guard"
+    "prepublishOnly": "pnpm release:prepublish-guard",
+    "test:inputs": "node --import tsx --test scripts/contract-inputs.test.mjs scripts/release-policy-current.test.mjs"
   },
   "dependencies": {
     "@github/copilot": "1.0.78",
@@ -90,12 +90,10 @@
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   },
-  "description": "Host-neutral execution boundary for workflow-self-recursive: resolves and validates one exact Workflow Package, binds an immutable Delivery Manifest, coordinates the Delivery, and emits bounded OTLP observations. · 与宿主无关的 Agent 工作流执行边界：解析并校验确定的 Workflow Package，绑定不可变 Delivery Manifest，协调交付并发出有界观测。",
+  "description": "Host-neutral execution boundary for Crystra: resolves and validates one exact Workflow Package, binds an immutable Delivery Manifest, coordinates the Delivery, and emits bounded OTLP observations. · 与宿主无关的 Agent 工作流执行边界：解析并校验确定的 Workflow Package，绑定不可变 Delivery Manifest，协调交付并发出有界观测。",
   "keywords": [
-    "wsr",
-    "workflow-self-recursive",
+    "crystra",
     "dsh",
-    "dsh-plugin",
     "deepseek-harness",
     "workflow",
     "workflow-engine",
@@ -108,11 +106,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/firestige/wsr-execution.git"
+    "url": "git+https://github.com/firestige/crystra-execution.git"
   },
-  "homepage": "https://github.com/firestige/wsr-execution",
+  "homepage": "https://github.com/firestige/crystra-execution",
   "bugs": {
-    "url": "https://github.com/firestige/wsr-execution/issues"
+    "url": "https://github.com/firestige/crystra-execution/issues"
   },
   "author": {
     "name": "firestige"

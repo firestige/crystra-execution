@@ -1,8 +1,8 @@
-# Execution release adapter
+# Crystra Execution release adapter
 
-This adapter implements `wsr.release-component@1.0.0` for the `wsr-execution` npm package. DSH bundle policy and publication are owned by `firestige/wsr-dsh`.
+The core is distributed as an ordinary, exact GitHub Release tarball dependency. The only public DSH plugin, `dsh-crystra`, is owned by `firestige/crystra-dsh`.
 
-Local no-side-effect checks:
+Local artifact checks (these do not publish):
 
 ```sh
 pnpm release:config:verify
@@ -11,9 +11,8 @@ pnpm release:check-coordinates
 pnpm release:simulate happy
 pnpm release:artifacts <directory>
 pnpm release:verify <directory>
-pnpm release:publish-npm <directory>
 ```
 
-The last command defaults to a dry plan. `--execute` is reserved for the trusted-publishing promotion workflow. It verifies the immutable manifest, publishes the core package, resumes only when existing registry bytes have the same digest, and asserts digest/description/versions/`latest` afterward.
+Pushing `release/next` starts candidate qualification from the committed `release/request.json`. The component checks out its own SHA and the exact development inputs listed in `config/development-inputs.json`, runs its regression and build gates, and builds `crystra-execution-<version>.tgz`. Candidate tags use `crystra-execution-v<version>-rc.N`.
 
-Pushing `release/next` automatically starts candidate qualification from the committed `release/request.json`; the candidate workflow has no manual or reusable entry point. After qualification, candidate publication mints a short-lived App token scoped to `wsr-execution` with Contents and Workflows write so a workflow-bearing archived target can be tagged. Stable promotion uses npm OIDC for the exact qualified tgz, then mints a fresh repository- and permission-scoped GitHub App token for the final GitHub Release operation.
+Stable promotion is a human release gate. It verifies and reuses the qualified bytes for the final GitHub Release, using a repository-scoped GitHub App token. Neither candidate publication nor promotion publishes to npm. Historical npm tooling is not part of this release path.

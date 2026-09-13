@@ -18,8 +18,8 @@ async function worktree(): Promise<string> {
 }
 
 async function writeBindings(root: string, text: string): Promise<void> {
-  await mkdir(join(root, ".wsr"), { recursive: true });
-  await writeFile(join(root, ".wsr", "role-provider-bindings.json"), text);
+  await mkdir(join(root, ".crystra"), { recursive: true });
+  await writeFile(join(root, ".crystra", "role-provider-bindings.json"), text);
 }
 
 function digest(value: unknown): string {
@@ -108,8 +108,8 @@ describe("repository Role-to-Provider/model bindings", () => {
     const root = await worktree();
     const outside = await worktree();
     await writeBindings(outside, JSON.stringify({ schemaVersion: "execution.repository-role-provider-bindings@1.0.0", bindings: {} }));
-    await mkdir(join(root, ".wsr"));
-    await symlink(join(outside, ".wsr", "role-provider-bindings.json"), join(root, ".wsr", "role-provider-bindings.json"));
+    await mkdir(join(root, ".crystra"));
+    await symlink(join(outside, ".crystra", "role-provider-bindings.json"), join(root, ".crystra", "role-provider-bindings.json"));
 
     await expect(loadRepositoryModelBindings(root)).rejects.toMatchObject({ code: "REPOSITORY_MODEL_BINDINGS_PATH_INVALID" });
   });

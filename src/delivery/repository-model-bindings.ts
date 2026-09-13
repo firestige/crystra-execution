@@ -8,7 +8,7 @@ import { canonicalJsonBytes, deepFreeze } from "../configuration/index.js";
 
 const DOCUMENT_SCHEMA_VERSION = "execution.repository-role-provider-bindings@1.0.0" as const;
 const SNAPSHOT_SCHEMA_VERSION = "execution.repository-role-provider-bindings-snapshot@1.0.0" as const;
-const DOCUMENT_RELATIVE_PATH = ".wsr/role-provider-bindings.json" as const;
+const DOCUMENT_RELATIVE_PATH = ".crystra/role-provider-bindings.json" as const;
 const MAX_DOCUMENT_BYTES = 256 * 1024;
 const MAX_BINDINGS = 1_024;
 const IDENTITY = /^[A-Za-z][A-Za-z0-9._-]{0,127}$/u;

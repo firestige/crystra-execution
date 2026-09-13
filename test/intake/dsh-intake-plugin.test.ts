@@ -10,11 +10,11 @@ import {
   createSessionPresentationRouter,
   createPluginRuntime,
   mapIntakeToolOperation,
-  parseWsrCommand,
+  parseCrystraCommand,
   presentationForDshOperation,
   presentToDshSession,
   recordConsumedActionReply,
-  recordWsrCommandInput,
+  recordCrystraCommandInput,
   resolveConversationWorkspace,
 } from "../../packages/dsh-intake/src/index.js";
 import {
@@ -141,13 +141,13 @@ describe("Wave 6 DSH Intake plugin", () => {
       },
     } as any);
 
-    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", operation: parseWsrCommand("list"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", operation: parseCrystraCommand("list"), images: [] }))
       .resolves.toEqual({ kind: "LIST", deliveries: [] });
-    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", operation: parseWsrCommand("status delivery-1"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", operation: parseCrystraCommand("status delivery-1"), images: [] }))
       .resolves.toMatchObject({ kind: "RECOVERY", deliveryId: "delivery-1" });
-    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", agent: { id: "rejected-session" }, operation: parseWsrCommand("recover delivery-1"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", agent: { id: "rejected-session" }, operation: parseCrystraCommand("recover delivery-1"), images: [] }))
       .resolves.toMatchObject({ kind: "ERROR", code: "DSH_INTAKE_WORKSPACE_UNAUTHORIZED" });
-    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", operation: parseWsrCommand("abandon delivery-1"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "rejected-session", operation: parseCrystraCommand("abandon delivery-1"), images: [] }))
       .resolves.toMatchObject({ kind: "TERMINAL", deliveryId: "delivery-1" });
     await runtime.bindings.claim({
       sessionKey: "bound-session",
@@ -156,27 +156,27 @@ describe("Wave 6 DSH Intake plugin", () => {
       worktree: workspace,
       deliveryBindingIdentity: bindingIdentity("delivery-bound"),
     });
-    await expect(runtime.invokeForSession({ sessionKey: "bound-session", operation: parseWsrCommand("abandon"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "bound-session", operation: parseCrystraCommand("abandon"), images: [] }))
       .resolves.toMatchObject({ kind: "TERMINAL", deliveryId: "delivery-bound" });
     expect(cancelled).toEqual(["delivery-1", "delivery-bound"]);
     expect(resolved).toEqual(["rejected-session"]);
 
     await expect(runtime.invokeForSession({
-      sessionKey: "accepted-session", agent: { id: "accepted-session" }, operation: parseWsrCommand("create fixture@1.0.0\nrequest"),
-      turnText: "/wsr create fixture@1.0.0\nrequest", images: [],
+      sessionKey: "accepted-session", agent: { id: "accepted-session" }, operation: parseCrystraCommand("create fixture@1.0.0\nrequest"),
+      turnText: "/crystra create fixture@1.0.0\nrequest", images: [],
     })).resolves.toMatchObject({ kind: "ERROR", code: "WORKFLOW_NOT_FOUND" });
     expect(resolved).toEqual(["rejected-session", "accepted-session"]);
     expect(requests).toEqual([expect.objectContaining({ worktree: workspace })]);
 
     await expect(runtime.invokeForSession({
-      sessionKey: "accepted-session", agent: { id: "different-session" }, operation: parseWsrCommand("create fixture@1.0.0\nrequest"),
-      turnText: "/wsr create fixture@1.0.0\nrequest", images: [],
+      sessionKey: "accepted-session", agent: { id: "different-session" }, operation: parseCrystraCommand("create fixture@1.0.0\nrequest"),
+      turnText: "/crystra create fixture@1.0.0\nrequest", images: [],
     })).resolves.toMatchObject({ kind: "ERROR", code: "DSH_INTAKE_WORKSPACE_UNAUTHORIZED" });
     expect(resolved).toEqual(["rejected-session", "accepted-session"]);
 
     await expect(runtime.invokeForSession({
-      sessionKey: "rejected-session", agent: { id: "rejected-session" }, operation: parseWsrCommand("create fixture@1.0.0\nrequest"),
-      turnText: "/wsr create fixture@1.0.0\nrequest", images: [],
+      sessionKey: "rejected-session", agent: { id: "rejected-session" }, operation: parseCrystraCommand("create fixture@1.0.0\nrequest"),
+      turnText: "/crystra create fixture@1.0.0\nrequest", images: [],
     })).resolves.toMatchObject({ kind: "ERROR", code: "DSH_INTAKE_WORKSPACE_UNAUTHORIZED" });
     await runtime.close();
   });
@@ -188,26 +188,26 @@ describe("Wave 6 DSH Intake plugin", () => {
     expect(appended).toEqual([["user/message", message, { surfaceOp: "append" }]]);
   });
 
-  it("routes an interactive WSR command through a host-owned turn so a blank session becomes a real conversation", async () => {
+  it("routes an interactive Crystra command through a host-owned turn so a blank session becomes a real conversation", async () => {
     const followedUp: unknown[] = [];
     let idleWaits = 0;
     const image = { type: "image", attachment: "attachment-1" };
-    const message = await recordWsrCommandInput(
+    const message = await recordCrystraCommandInput(
       {
         followup(value: unknown) { followedUp.push(value); },
         async whenIdle() { idleWaits += 1; },
       },
       "create hello-world-workflow@0.1.0\n向我问好、概括本请求；如果存在附件，请确认已经看到它。",
       [image],
-      () => "message-wsr-1",
+      () => "message-crystra-1",
     );
 
     expect(message).toEqual({
-      id: "message-wsr-1",
+      id: "message-crystra-1",
       role: "user",
-      source: { kind: "user", workflowCommand: "wsr" },
+      source: { kind: "user", workflowCommand: "crystra" },
       content: [
-        { type: "text", text: "/wsr create hello-world-workflow@0.1.0\n向我问好、概括本请求；如果存在附件，请确认已经看到它。" },
+        { type: "text", text: "/crystra create hello-world-workflow@0.1.0\n向我问好、概括本请求；如果存在附件，请确认已经看到它。" },
         image,
       ],
     });
@@ -220,7 +220,7 @@ describe("Wave 6 DSH Intake plugin", () => {
       kind: "RECOVERY", worktree: "/conversation", deliveryId: "delivery-existing", state: "RESULT_UNRESOLVED",
     });
     expect(presentation).toEqual({
-      schemaVersion: "wsr.presentation@1.0.0",
+      schemaVersion: "crystra.presentation@1.0.0",
       correlation: "correlation-1",
       kind: "delivery-status",
       data: {
@@ -244,7 +244,7 @@ describe("Wave 6 DSH Intake plugin", () => {
     expect(factoryCalls).toBe(0);
   });
 
-  it("publishes the exact DSH bundle, public dependency, and first-party skill without Package content", async () => {
+  it("keeps the private Intake test fixture separate from public distribution", async () => {
     const packageRoot = path.resolve(import.meta.dirname, "../../packages/dsh-intake");
     const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8")) as any;
     const patch = await readFile(path.join(packageRoot, "cordis.patch.yml"), "utf8");
@@ -253,30 +253,30 @@ describe("Wave 6 DSH Intake plugin", () => {
     const client = await readFile(path.join(packageRoot, "lib/client.js"), "utf8");
 
     expect(manifest).toMatchObject({
-      name: "wsr-dsh-intake",
+      name: "crystra-execution-intake-internal",
       version: "0.2.0",
-      dependencies: { "wsr-execution": "^0.2.0" },
+      private: true, dependencies: { "crystra-execution": "workspace:*" },
       exports: { "./client": "./lib/client.js" },
       dsh: { bundle: { patch: "./cordis.patch.yml" }, compatibility: {
-        executionSystem: "^0.2.0", dsh: "0.1.1-rc.2", commands: "0.1.1-rc.2",
+        executionSystem: "0.1.0", dsh: "0.1.1-rc.2", commands: "0.1.1-rc.2",
         agents: "0.1.1-rc.2", skillFilesystem: "0.1.1-rc.2", toolSkill: "0.1.1-rc.2", tools: "0.1.1-rc.2",
       }, client: { inject: ["@deepseek-ai/dsh-client-runtime", "@deepseek-ai/dsh-client-ui-conversation", "@deepseek-ai/dsh-client-ui-sidebar"], platform: "web" } },
     });
     expect(manifest.peerDependencies).toBeUndefined();
     expect(patch).toContain("id: workflow-execution");
-    expect(patch).toContain("name: 'wsr-dsh-intake'");
+    expect(patch).toContain("name: 'crystra-execution-intake-internal'");
     expect(patch).toContain("id: skill-filesystem");
     expect(patch).toContain("customSkillDirs");
     expect(patch).toMatch(/id: skill-filesystem[\s\S]*?disabled: false/u);
     expect(patch).toMatch(/id: tool-skill\s+disabled: false/u);
     expect(skill).toContain("workflow_execution_intake");
     expect(skill).toContain("exactly once");
-    expect(skill).toContain("/wsr action finish");
-    expect(source).toContain('import("wsr-execution")');
+    expect(skill).toContain("/crystra action finish");
+    expect(source).toContain('import("crystra-execution")');
     expect(client).toContain('conversation.chat.commandview');
     expect(client).toContain('sidebar.footer.action');
-    expect(client).toContain('key: "wsr"');
-    expect(client).toContain('data-wsr-presentation');
+    expect(client).toContain('key: "crystra"');
+    expect(client).toContain('data-crystra-presentation');
     expect(source).toContain("recordInput: true");
     expect(source).toContain("session?.header?.cwd");
     expect(source).toContain('"workspaceRegistry"');
@@ -425,16 +425,16 @@ describe("Wave 6 DSH Intake plugin", () => {
       }),
     } as any);
     expect(await runtime.bindings.byDelivery("delivery-1")).toMatchObject({ state: "DETACHED" });
-    const first = await runtime.invokeForSession({ sessionKey: "new-session", agent: { id: "new-session" }, operation: parseWsrCommand("recover"), images: [] });
+    const first = await runtime.invokeForSession({ sessionKey: "new-session", agent: { id: "new-session" }, operation: parseCrystraCommand("recover"), images: [] });
     expect(first).toMatchObject({ kind: "RECOVERY", deliveryId: "delivery-1" });
     expect(await runtime.bindings.byDelivery("delivery-1")).toMatchObject({ sessionKey: "new-session", state: "BOUND" });
-    await expect(runtime.invokeForSession({ sessionKey: "foreign-session", agent: { id: "foreign-session" }, operation: parseWsrCommand("recover delivery-1"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "foreign-session", agent: { id: "foreign-session" }, operation: parseCrystraCommand("recover delivery-1"), images: [] }))
       .resolves.toMatchObject({ kind: "ERROR", code: "DSH_INTAKE_WORKSPACE_UNAUTHORIZED" });
-    const second = await runtime.invokeForSession({ sessionKey: "second-session", agent: { id: "second-session" }, operation: parseWsrCommand("recover delivery-1"), images: [] });
+    const second = await runtime.invokeForSession({ sessionKey: "second-session", agent: { id: "second-session" }, operation: parseCrystraCommand("recover delivery-1"), images: [] });
     expect(second).toMatchObject({ kind: "ERROR", code: "DELIVERY_INTAKE_BOUND" });
     expect(recoverCalls).toBe(1);
     const occupiedCreate = await Promise.race([
-      runtime.invokeForSession({ sessionKey: "third-session", agent: { id: "third-session" }, operation: parseWsrCommand("create fixture@1.0.0\nnew request"), turnText: "/wsr create fixture@1.0.0\nnew request", images: [] }),
+      runtime.invokeForSession({ sessionKey: "third-session", agent: { id: "third-session" }, operation: parseCrystraCommand("create fixture@1.0.0\nnew request"), turnText: "/crystra create fixture@1.0.0\nnew request", images: [] }),
       new Promise((resolve) => setTimeout(() => resolve({ kind: "TIMEOUT" }), 50)),
     ]);
     expect(occupiedCreate).toMatchObject({ kind: "RECOVERY", deliveryId: "delivery-1" });
@@ -509,22 +509,22 @@ describe("Wave 6 DSH Intake plugin", () => {
     await expect(new IntakeSessionBindingRepository(file).start()).rejects.toMatchObject({ code: "INTAKE_BINDING_INVARIANT_VIOLATION" });
   });
 
-  it("parses only the exact /wsr operation grammar and never accepts --intent", () => {
-    expect(parseWsrCommand("list")).toEqual({ operation: "list" });
-    expect(parseWsrCommand("create implementation-workflow@0.3.0\nuse this turn")).toEqual({ operation: "create", selector: "implementation-workflow@0.3.0", directive: "/wsr create implementation-workflow@0.3.0", remainder: "use this turn" });
-    expect(parseWsrCommand("recover")).toEqual({ operation: "recover" });
-    expect(parseWsrCommand("recover delivery-1")).toEqual({ operation: "recover", deliveryId: "delivery-1" });
-    expect(parseWsrCommand("status delivery-1")).toEqual({ operation: "status", deliveryId: "delivery-1" });
-    expect(parseWsrCommand("action finish\nfinal answer")).toEqual({ operation: "action-finish", remainder: "final answer" });
-    expect(parseWsrCommand("abandon")).toEqual({ operation: "abandon" });
-    expect(parseWsrCommand("abandon delivery-1")).toEqual({ operation: "abandon", deliveryId: "delivery-1" });
-    expect(() => parseWsrCommand("abandon\nunexpected")).toThrowError(expect.objectContaining({
-      code: "WSR_COMMAND_INVALID",
-      message: expect.stringContaining("Usage: /wsr abandon [delivery-id]"),
+  it("parses only the exact /crystra operation grammar and never accepts --intent", () => {
+    expect(parseCrystraCommand("list")).toEqual({ operation: "list" });
+    expect(parseCrystraCommand("create implementation-workflow@0.3.0\nuse this turn")).toEqual({ operation: "create", selector: "implementation-workflow@0.3.0", directive: "/crystra create implementation-workflow@0.3.0", remainder: "use this turn" });
+    expect(parseCrystraCommand("recover")).toEqual({ operation: "recover" });
+    expect(parseCrystraCommand("recover delivery-1")).toEqual({ operation: "recover", deliveryId: "delivery-1" });
+    expect(parseCrystraCommand("status delivery-1")).toEqual({ operation: "status", deliveryId: "delivery-1" });
+    expect(parseCrystraCommand("action finish\nfinal answer")).toEqual({ operation: "action-finish", remainder: "final answer" });
+    expect(parseCrystraCommand("abandon")).toEqual({ operation: "abandon" });
+    expect(parseCrystraCommand("abandon delivery-1")).toEqual({ operation: "abandon", deliveryId: "delivery-1" });
+    expect(() => parseCrystraCommand("abandon\nunexpected")).toThrowError(expect.objectContaining({
+      code: "CRYSTRA_COMMAND_INVALID",
+      message: expect.stringContaining("Usage: /crystra abandon [delivery-id]"),
     }));
-    expect(() => parseWsrCommand("create implementation-workflow --intent hidden prompt")).toThrowError("WSR_COMMAND_INVALID");
-    expect(() => parseWsrCommand("recover latest")).not.toThrow();
-    expect(() => parseWsrCommand("recover by-name extra")).toThrowError("WSR_COMMAND_INVALID");
+    expect(() => parseCrystraCommand("create implementation-workflow --intent hidden prompt")).toThrowError("CRYSTRA_COMMAND_INVALID");
+    expect(() => parseCrystraCommand("recover latest")).not.toThrow();
+    expect(() => parseCrystraCommand("recover by-name extra")).toThrowError("CRYSTRA_COMMAND_INVALID");
     expect(mapIntakeToolOperation({ operation: "create", selector: "implementation-workflow@0.3.0" }))
       .toEqual({ operation: "create", selector: "implementation-workflow@0.3.0", directive: "/workflow-execution" });
     expect(mapIntakeToolOperation({ operation: "action-finish" })).toEqual({ operation: "action-finish" });
@@ -542,9 +542,9 @@ describe("Wave 6 DSH Intake plugin", () => {
     });
     await presentToDshSession(agent, actionOutputPresentation("intake-1", { text: "Question from DSH-E" }), () => "cmd-presentation-1");
     expect(events).toEqual([
-      ["command/run", { commandId: "cmd-presentation-1", name: "wsr", source: { kind: "plugin", plugin: "workflow-execution" } }],
+      ["command/run", { commandId: "cmd-presentation-1", name: "crystra", source: { kind: "plugin", plugin: "workflow-execution" } }],
       ["command/done", { commandId: "cmd-presentation-1", kind: "success", text: JSON.stringify({
-        schemaVersion: "wsr.presentation@1.0.0", correlation: "intake-1", kind: "action-output", data: { content: { text: "Question from DSH-E" } },
+        schemaVersion: "crystra.presentation@1.0.0", correlation: "intake-1", kind: "action-output", data: { content: { text: "Question from DSH-E" } },
       }) }],
     ]);
   });
@@ -622,8 +622,8 @@ describe("Wave 6 DSH Intake plugin", () => {
     const attachmentStore = Object.freeze({ async readImage() { return { ref: { name: "proof.png", mediaType: "image/png" }, data: Uint8Array.from([1, 2, 3]) }; } });
     const result = await runtime.invokeForSession({
       sessionKey: "native-session-private", agent: { id: "native-session-private" },
-      operation: parseWsrCommand("create implementation-workflow@0.3.0\nuse attached evidence"),
-      turnText: "/wsr create implementation-workflow@0.3.0\nuse attached evidence",
+      operation: parseCrystraCommand("create implementation-workflow@0.3.0\nuse attached evidence"),
+      turnText: "/crystra create implementation-workflow@0.3.0\nuse attached evidence",
       images: [{ type: "image", attachment: { attachmentId: "native-ref" } }], attachmentStore,
       signal: new AbortController().signal,
     });
@@ -636,7 +636,7 @@ describe("Wave 6 DSH Intake plugin", () => {
     });
     expect(JSON.stringify(requests[0])).not.toContain("native-session-private");
     expect(presentations).toEqual([{ sessionKey: "native-session-private", presentation: {
-      schemaVersion: "wsr.presentation@1.0.0", correlation: requests[0].intakeCorrelation,
+      schemaVersion: "crystra.presentation@1.0.0", correlation: requests[0].intakeCorrelation,
       kind: "action-output", data: { content: { text: "Question from DSH-E" } },
     } }]);
     expect(await capturedDependencies.attachments.read(requests[0].prompt.attachments[0].contentRef)).toEqual(Uint8Array.from([1, 2, 3]));
@@ -644,22 +644,22 @@ describe("Wave 6 DSH Intake plugin", () => {
 
     await expect(runtime.invokeForSession({
       sessionKey: "native-session-private", agent: { id: "native-session-private" },
-      operation: parseWsrCommand("create implementation-workflow@0.3.0\nsecond Delivery"),
-      turnText: "/wsr create implementation-workflow@0.3.0\nsecond Delivery", images: [], attachmentStore,
+      operation: parseCrystraCommand("create implementation-workflow@0.3.0\nsecond Delivery"),
+      turnText: "/crystra create implementation-workflow@0.3.0\nsecond Delivery", images: [], attachmentStore,
       signal: new AbortController().signal,
     })).resolves.toMatchObject({ kind: "ERROR", code: "SESSION_INTAKE_BOUND" });
     expect(requests).toHaveLength(1);
 
     await runtime.answerForSession({ sessionKey: "native-session-private", text: "ordinary answer", images: [], attachmentStore, signal: new AbortController().signal });
     expect(answers).toEqual([{ correlation: requests[0].intakeCorrelation, prompt: { text: "ordinary answer", attachments: [] } }]);
-    await runtime.invokeForSession({ sessionKey: "native-session-private", worktree, operation: parseWsrCommand("action finish\nfinal answer"), turnText: "/wsr action finish\nfinal answer", images: [], attachmentStore, signal: new AbortController().signal });
+    await runtime.invokeForSession({ sessionKey: "native-session-private", worktree, operation: parseCrystraCommand("action finish\nfinal answer"), turnText: "/crystra action finish\nfinal answer", images: [], attachmentStore, signal: new AbortController().signal });
     expect(finishes).toEqual([{ correlation: requests[0].intakeCorrelation, prompt: { text: "final answer", attachments: [] } }]);
     resolveExecution({ kind: "TERMINAL", worktree, deliveryId: "delivery-1", outcome: "SUCCEEDED" });
     await expect.poll(async () => runtime.bindings.bySession("native-session-private")).toBeUndefined();
     await expect.poll(() => presentations).toContainEqual({
       sessionKey: "native-session-private",
       presentation: {
-        schemaVersion: "wsr.presentation@1.0.0", correlation: requests[0].intakeCorrelation,
+        schemaVersion: "crystra.presentation@1.0.0", correlation: requests[0].intakeCorrelation,
         kind: "terminal-result", data: { worktree, deliveryId: "delivery-1", outcome: "SUCCEEDED" },
       },
     });
@@ -688,14 +688,14 @@ describe("Wave 6 DSH Intake plugin", () => {
       factory: Object.freeze({ async create() { return application; } }), control, quiesceTimeoutMs: 1_000,
       resolveConversationWorkspace: async (agent: { id: string }) => Object.freeze({ sessionKey: agent.id, workspaceId: "workspace-1", path: worktree }),
     } as any);
-    await runtime.invokeForSession({ sessionKey: "session-close", agent: { id: "session-close" }, operation: parseWsrCommand("create fixture@1.0.0\nwait"), turnText: "/wsr create fixture@1.0.0\nwait", images: [] });
+    await runtime.invokeForSession({ sessionKey: "session-close", agent: { id: "session-close" }, operation: parseCrystraCommand("create fixture@1.0.0\nwait"), turnText: "/crystra create fixture@1.0.0\nwait", images: [] });
     const closing = runtime.close();
     await Promise.resolve();
     expect(applicationClosed).toBe(false);
     resolveExecution({ kind: "TERMINAL", worktree, deliveryId: "delivery-close", outcome: "SUCCEEDED" });
     await closing;
     expect(applicationClosed).toBe(true);
-    await expect(runtime.invokeForSession({ sessionKey: "after-close", worktree, operation: parseWsrCommand("list"), images: [] }))
+    await expect(runtime.invokeForSession({ sessionKey: "after-close", worktree, operation: parseCrystraCommand("list"), images: [] }))
       .resolves.toMatchObject({ kind: "ERROR", code: "APPLICATION_CLOSING" });
   });
 
@@ -727,8 +727,8 @@ describe("Wave 6 DSH Intake plugin", () => {
     } as any);
     await runtime.invokeForSession({
       sessionKey: "session-timeout", agent: { id: "session-timeout" },
-      operation: parseWsrCommand("create fixture@1.0.0\nwait"),
-      turnText: "/wsr create fixture@1.0.0\nwait", images: [],
+      operation: parseCrystraCommand("create fixture@1.0.0\nwait"),
+      turnText: "/crystra create fixture@1.0.0\nwait", images: [],
     });
 
     await runtime.close();

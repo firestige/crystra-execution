@@ -81,8 +81,8 @@ importers:
 
   packages/dsh-intake:
     dependencies:
-      wsr-execution:
-        specifier: ^0.2.0
+      crystra-execution:
+        specifier: workspace:*
         version: link:../..
 
 packages:

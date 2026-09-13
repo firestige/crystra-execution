@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 interface Schema { readonly $defs?: Record<string, unknown>; readonly properties: Record<string, any> }
 const root = fileURLToPath(new URL("..", import.meta.url));
-const contractRoot = path.resolve(root, "../system-contracts/workflow-dsl-2-candidate/generated/schemas");
+const contractRoot = path.resolve(root, ".crystra-inputs/contracts/workflow-dsl-2-candidate/generated/schemas");
 const meta = JSON.parse(readFileSync(path.join(contractRoot, "agentops.meta.schema.json"), "utf8")) as { $defs: { contractVersion: { const: string } } };
 const routes = JSON.parse(readFileSync(path.join(contractRoot, "routes.schema.json"), "utf8")) as Schema;
 const workflow = JSON.parse(readFileSync(path.join(contractRoot, "workflow-definition.schema.json"), "utf8")) as Schema;

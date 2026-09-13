@@ -26,7 +26,7 @@ async function selectWorkspace(cdp: CdpConnection, origin: URL, workspace: strin
   const state = await waitFor(async () => {
     const value = await evaluate(cdp, `(() => {
       if ([...document.querySelectorAll('button')].some((button) => /^(选择工作区|Choose workspace|Select workspace)$/u.test(button.textContent?.trim() ?? ''))) return 'picker';
-      if (document.querySelector('[data-wsr-sidebar-resources="true"]') || document.querySelector('textarea,[contenteditable="true"]')) return 'active';
+      if (document.querySelector('[data-crystra-sidebar-resources="true"]') || document.querySelector('textarea,[contenteditable="true"]')) return 'active';
       return undefined;
     })()`);
     return value === "picker" || value === "active" ? value : undefined;
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
   const origin = new URL(originValue);
   const evidence = new URL(evidenceValue);
   const workspace = await realpath(workspaceValue);
-  const temporary = await mkdtemp(path.join(tmpdir(), "wsr-current-source-browser-"));
+  const temporary = await mkdtemp(path.join(tmpdir(), "crystra-current-source-browser-"));
   let chrome: ChildProcess | undefined;
   let cdp: CdpConnection | undefined;
   try {
@@ -86,36 +86,36 @@ async function main(): Promise<void> {
     cdp = browser.cdp;
     const workspaceId = await selectWorkspace(cdp, origin, workspace);
     if (qualification.scenario === "diagnostic") {
-      await submitBrowserCommand(cdp, "/wsr create system-design-workflow\nDesign a local health endpoint and preserve a controlled lower-layer failure diagnostic.");
+      await submitBrowserCommand(cdp, "/crystra create system-design-workflow\nDesign a local health endpoint and preserve a controlled lower-layer failure diagnostic.");
       const first = await waitFor(async () => await evaluate(cdp!, `(() => {
-        const nodes = [...document.querySelectorAll('[data-wsr-presentation="true"][data-wsr-surface="chat"][data-wsr-state="unresolved"]')];
+        const nodes = [...document.querySelectorAll('[data-crystra-presentation="true"][data-crystra-surface="chat"][data-crystra-state="unresolved"]')];
         for (const node of nodes) {
           const row = node.closest('[data-disclosure-row="true"]');
           if (row?.getAttribute('aria-expanded') === 'false') row.click();
         }
-        const bodies = [...document.querySelectorAll('[data-wsr-presentation-body="true"][data-wsr-state="unresolved"]')];
+        const bodies = [...document.querySelectorAll('[data-crystra-presentation-body="true"][data-crystra-state="unresolved"]')];
         const body = bodies.findLast((candidate) => candidate.textContent?.includes('HOST_START') && candidate.textContent?.includes('DATAFLOW_BINDING_INVALID'));
         const node = body === undefined ? undefined : nodes.findLast((candidate) => candidate.closest('[data-disclosure-row="true"]')?.parentElement?.contains(body));
         return node && body
           ? { count: nodes.length, text: node.textContent + ' · ' + body.textContent }
           : undefined;
       })()`), "CURRENT_SOURCE_PUBLIC_DIAGNOSTIC_UNAVAILABLE", 360_000);
-      await submitBrowserCommand(cdp, "/wsr status");
+      await submitBrowserCommand(cdp, "/crystra status");
       const status = await waitFor(async () => await evaluate(cdp!, `(() => {
-        const nodes = [...document.querySelectorAll('[data-wsr-presentation="true"][data-wsr-surface="chat"][data-wsr-state="unresolved"]')];
+        const nodes = [...document.querySelectorAll('[data-crystra-presentation="true"][data-crystra-surface="chat"][data-crystra-state="unresolved"]')];
         if (nodes.length <= ${JSON.stringify(first.count)}) return undefined;
         const node = nodes.at(-1);
         const row = node?.closest('[data-disclosure-row="true"]');
         if (row?.getAttribute('aria-expanded') === 'false') row.click();
-        const bodies = [...document.querySelectorAll('[data-wsr-presentation-body="true"][data-wsr-state="unresolved"]')];
-        const body = row?.parentElement?.querySelector('[data-wsr-presentation-body="true"][data-wsr-state="unresolved"]');
+        const bodies = [...document.querySelectorAll('[data-crystra-presentation-body="true"][data-crystra-state="unresolved"]')];
+        const body = row?.parentElement?.querySelector('[data-crystra-presentation-body="true"][data-crystra-state="unresolved"]');
         return node && body
           && body.textContent?.includes('HOST_START') && body.textContent?.includes('DATAFLOW_BINDING_INVALID')
           ? { count: nodes.length, text: node.textContent + ' · ' + body.textContent }
           : undefined;
       })()`), "CURRENT_SOURCE_STATUS_DIAGNOSTIC_UNAVAILABLE", 60_000);
       const sidebar = await waitFor(async () => await evaluate(cdp!, `(() => {
-        const row = [...document.querySelectorAll('.wsr-delivery-row')].find((node) => /Result unresolved/iu.test(node.getAttribute('aria-label') ?? ''));
+        const row = [...document.querySelectorAll('.crystra-delivery-row')].find((node) => /Result unresolved/iu.test(node.getAttribute('aria-label') ?? ''));
         return row ? { label: row.getAttribute('aria-label') } : undefined;
       })()`), "CURRENT_SOURCE_SIDEBAR_UNRESOLVED_UNAVAILABLE", 40_000);
       process.stdout.write(`${JSON.stringify({
@@ -127,12 +127,12 @@ async function main(): Promise<void> {
       })}\n`);
       return;
     }
-    await submitBrowserCommand(cdp, `/wsr create ${qualification.workflowSelector}\nGreet the current-source Product qualification and return a concise final answer.`);
+    await submitBrowserCommand(cdp, `/crystra create ${qualification.workflowSelector}\nGreet the current-source Product qualification and return a concise final answer.`);
     const terminal = await waitFor(async () => await evaluate(cdp!, `(() => {
-      const candidates = [...document.querySelectorAll('[data-wsr-presentation="true"][data-wsr-surface="chat"]')];
-      const error = candidates.findLast((node) => node.getAttribute('data-wsr-kind') === 'error');
+      const candidates = [...document.querySelectorAll('[data-crystra-presentation="true"][data-crystra-surface="chat"]')];
+      const error = candidates.findLast((node) => node.getAttribute('data-crystra-kind') === 'error');
       if (error) return { kind: 'error', text: error.textContent };
-      const result = candidates.findLast((node) => node.getAttribute('data-wsr-kind') === 'terminal-result');
+      const result = candidates.findLast((node) => node.getAttribute('data-crystra-kind') === 'terminal-result');
       return result ? { kind: 'terminal-result', text: result.textContent } : undefined;
     })()`), "CURRENT_SOURCE_DELIVERY_TERMINAL_UNAVAILABLE", 360_000);
     if (terminal.kind !== "terminal-result") {
@@ -143,19 +143,19 @@ async function main(): Promise<void> {
       return added.length === 1 ? added[0] : undefined;
     }, "CURRENT_SOURCE_TASK_BINDING_NOT_PROJECTED", 60_000);
     await waitFor(async () => await evaluate(cdp!, `(() => {
-      const tab = [...document.querySelectorAll('[role="tab"]')].find((node) => node.textContent?.trim() === 'WSR Studio');
+      const tab = [...document.querySelectorAll('[role="tab"]')].find((node) => node.textContent?.trim() === 'Crystra Studio');
       if (!tab) return false;
       tab.click();
       return true;
     })()`) === true ? true : undefined, "CURRENT_SOURCE_STUDIO_TAB_UNAVAILABLE", 40_000);
-    await waitFor(async () => await evaluate(cdp!, `document.querySelector('[data-wsr-studio-page="selection"]') ? true : undefined`), "CURRENT_SOURCE_STUDIO_SELECTION_UNAVAILABLE", 40_000);
+    await waitFor(async () => await evaluate(cdp!, `document.querySelector('[data-crystra-studio-page="selection"]') ? true : undefined`), "CURRENT_SOURCE_STUDIO_SELECTION_UNAVAILABLE", 40_000);
     await evaluate(cdp, `(() => {
       const button = [...document.querySelectorAll('button')].find((node) => node.textContent?.trim() === 'Load tasks');
       if (!button) throw new Error('load tasks unavailable');
       button.click();
     })()`);
     await waitFor(async () => await evaluate(cdp!, `(() => {
-      const row = document.querySelector('[data-wsr-task-id=${JSON.stringify(task.task_id)}]');
+      const row = document.querySelector('[data-crystra-task-id=${JSON.stringify(task.task_id)}]');
       const input = row?.querySelector('input[type="checkbox"]');
       if (!input) return undefined;
       input.click();
@@ -167,10 +167,10 @@ async function main(): Promise<void> {
       button.click();
     })()`);
     const dashboard = await waitFor(async () => await evaluate(cdp!, `(() => {
-      const layout = document.querySelector('[data-wsr-dashboard-layout="wsr-dsh.studio-layout@1"]');
+      const layout = document.querySelector('[data-crystra-dashboard-layout="crystra-dsh.studio-layout@1"]');
       const receipt = [...document.querySelectorAll('button')].find((node) => node.textContent?.trim() === 'View receipt');
       if (!layout || !receipt) return undefined;
-      return { panels: layout.querySelectorAll('[data-wsr-dashboard-panel]').length, receipt: true };
+      return { panels: layout.querySelectorAll('[data-crystra-dashboard-panel]').length, receipt: true };
     })()`), "CURRENT_SOURCE_STUDIO_EVALUATE_FAILED", 120_000);
     if (dashboard.panels < 1) throw new Error(`CURRENT_SOURCE_STUDIO_DASHBOARD_EMPTY:${JSON.stringify(dashboard)}`);
     await evaluate(cdp, `([...document.querySelectorAll('button')].find((node) => node.textContent?.trim() === 'View receipt')).click()`);

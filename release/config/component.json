@@ -1,14 +1,17 @@
 {
-  "schemaVersion": "wsr.release-component@1.0.0",
-  "repository": "firestige/wsr-execution",
+  "schemaVersion": "crystra.release-component@1.0.0",
+  "repository": "firestige/crystra-execution",
   "releaseBranch": "main",
   "triggerBranch": "release/next",
   "assetMode": "npm-package",
-  "acceptanceCommand": "pnpm release:check-coordinates && pnpm test:full && pnpm test:coverage && pnpm typecheck && pnpm build && pnpm check:generated && pnpm harness static && pnpm harness feasibility",
+  "acceptanceCommand": "pnpm test:inputs && pnpm release:check-coordinates && pnpm test:full && pnpm test:coverage && pnpm typecheck && pnpm build && pnpm check:generated && pnpm harness static && pnpm harness feasibility",
   "buildCommand": "pnpm release:artifacts",
   "verifyCommand": "pnpm release:verify",
-  "publisherAdapter": "npm-package+github-release",
-  "remoteInstallMode": "npm-clean-project",
+  "publisherAdapter": "github-release-tarball",
+  "remoteInstallMode": "github-tarball-clean-project",
   "stablePolicy": "qualified-candidate-exact-assets",
-  "capabilities": ["github-release", "npm-package"]
+  "capabilities": [
+    "github-release",
+    "npm-package"
+  ]
 }

@@ -16,7 +16,7 @@ import {
 } from "../../src/observation/index.js";
 
 const require = createRequire(import.meta.url);
-const oracle = require("../../../system-contracts/observation/tools/validator.cjs") as {
+const oracle = require("../../.crystra-inputs/contracts/observation/tools/validator.cjs") as {
   decodeOtlpRequest(signal: "traces" | "logs", bytes: Buffer, options: { familySchema: string }): { decision: string; record_count: number };
 };
 const mapper = new DeliveryObservationMapper({ serviceName: "execution", serviceVersion: "0.1.0" });
@@ -84,7 +84,7 @@ describe("M03 producer-role corpus", () => {
     })) byName.set(name.name, id as ObservationFieldId);
     const records = [];
     for (const relative of ["fixtures/positive/finding-fix-recheck.json", "fixtures/multi-target/two-sections.json"]) {
-      const fixture = JSON.parse(await readFile(path.join("../system-contracts/observation", relative), "utf8"));
+      const fixture = JSON.parse(await readFile(path.join(".crystra-inputs/contracts/observation", relative), "utf8"));
       for (const record of fixture.input.records) {
         const fields = Object.fromEntries(Object.entries(record.attributes).map(([name, value]) => [byName.get(name), value])) as Partial<Record<ObservationFieldId, ObservationScalar>>;
         records.push(mappedEvent(record.event_name, record.attributes["agentops.event.id"], record.attributes["agentops.family.schema"], fields));

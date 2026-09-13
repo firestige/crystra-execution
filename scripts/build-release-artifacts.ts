@@ -10,9 +10,9 @@ const repository = path.resolve(import.meta.dirname, "..");
 const destination = path.resolve(process.argv[2] ?? path.join(repository, "tmp/release"));
 const coreManifest = JSON.parse(await readFile(path.join(repository, "package.json"), "utf8")) as { readonly version: string };
 const version = coreManifest.version;
-const coreArchiveName = `wsr-execution-${version}.tgz`;
+const coreArchiveName = `crystra-execution-${version}.tgz`;
 const packageNames = Object.freeze<Record<string, string>>({
-  [coreArchiveName]: "wsr-execution",
+  [coreArchiveName]: "crystra-execution",
 });
 
 function sha256(bytes: Uint8Array): string {
@@ -22,7 +22,7 @@ function sha256(bytes: Uint8Array): string {
 function pack(directory: string): void {
   execFileSync("npm", ["pack", "--silent", "--pack-destination", destination], {
     cwd: directory,
-    env: { ...process.env, WSR_RELEASE_PACK_MODE: "verified-builder" },
+    env: { ...process.env, CRYSTRA_RELEASE_PACK_MODE: "verified-builder" },
     stdio: "inherit",
   });
 }

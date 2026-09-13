@@ -13,10 +13,10 @@ describe("Iteration 3 locked DSH feasibility", () => {
     const composed = probeDshBundleLoader();
 
     expect(composed.packageVersion).toBe("0.1.1-rc.2");
-    expect(composed.profileBundles).toContain("@workflow-self-recursive/dsh-intake-feasibility");
+    expect(composed.profileBundles).toContain("@crystra/dsh-intake-feasibility");
     expect(composed.row).toEqual({
       id: "workflow-execution",
-      name: "@workflow-self-recursive/dsh-intake-feasibility",
+      name: "@crystra/dsh-intake-feasibility",
       config: { configPath: "/tmp/execution-config.yaml" },
     });
   });

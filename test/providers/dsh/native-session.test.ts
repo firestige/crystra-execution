@@ -79,7 +79,7 @@ describe("DSH native session adapter", () => {
     const completion = definitions.find((definition) => definition.name === "workflow_complete");
     expect(completion).toBeDefined();
     expect(restrictions).toEqual([{ deny: ["ambient-bash"] }]);
-    expect(sections).toEqual([{ name: "workflow:admitted-instructions", order: 10, text: '<wsr-role-prompt resource="role.test">\nexact instructions\n</wsr-role-prompt>' }]);
+    expect(sections).toEqual([{ name: "workflow:admitted-instructions", order: 10, text: '<crystra-role-prompt resource="role.test">\nexact instructions\n</crystra-role-prompt>' }]);
     expect(completion!.output.render({}, {})).toEqual([{ type: "text", text: "structured completion accepted" }]);
     let concluded = false;
     agent.whenIdle = async () => {

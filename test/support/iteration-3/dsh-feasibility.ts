@@ -44,8 +44,8 @@ export function probeDshBundleLoader(): {
   const directory = mkdtempSync(path.join(tmpdir(), "iter3-dsh-loader-"));
   const dshHome = path.join(directory, "home");
   const profile = path.join(dshHome, "profiles/workflow-execution");
-  const packageScope = path.join(profile, "node_modules/@workflow-self-recursive");
-  const bundleName = "@workflow-self-recursive/dsh-intake-feasibility";
+  const packageScope = path.join(profile, "node_modules/@crystra");
+  const bundleName = "@crystra/dsh-intake-feasibility";
   try {
     mkdirSync(packageScope, { recursive: true });
     symlinkSync(fixtureRoot, path.join(packageScope, "dsh-intake-feasibility"), "dir");
@@ -114,8 +114,8 @@ export function probeDshBrokenPatchRecovery(): {
   const directory = mkdtempSync(path.join(tmpdir(), "iter3-dsh-broken-patch-"));
   const dshHome = path.join(directory, "home");
   const profile = path.join(dshHome, "profiles/workflow-execution");
-  const packageScope = path.join(profile, "node_modules/@workflow-self-recursive");
-  const bundleName = "@workflow-self-recursive/dsh-intake-feasibility";
+  const packageScope = path.join(profile, "node_modules/@crystra");
+  const bundleName = "@crystra/dsh-intake-feasibility";
   try {
     mkdirSync(packageScope, { recursive: true });
     symlinkSync(fixtureRoot, path.join(packageScope, "dsh-intake-feasibility"), "dir");

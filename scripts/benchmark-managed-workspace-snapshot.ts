@@ -12,9 +12,9 @@ import { performance } from "node:perf_hooks";
 
 import { captureManagedWorkspaceTree } from "../src/custody/managed-workspace-snapshot.js";
 
-const managedFileCount = Number.parseInt(process.env.WSR_BENCHMARK_MANAGED_FILES ?? "1000", 10);
-const ignoredBytes = Number.parseInt(process.env.WSR_BENCHMARK_IGNORED_BYTES ?? String(512 * 1024 * 1024), 10);
-const maximumDurationMs = Number.parseInt(process.env.WSR_BENCHMARK_MAX_MS ?? "10000", 10);
+const managedFileCount = Number.parseInt(process.env.CRYSTRA_BENCHMARK_MANAGED_FILES ?? "1000", 10);
+const ignoredBytes = Number.parseInt(process.env.CRYSTRA_BENCHMARK_IGNORED_BYTES ?? String(512 * 1024 * 1024), 10);
+const maximumDurationMs = Number.parseInt(process.env.CRYSTRA_BENCHMARK_MAX_MS ?? "10000", 10);
 if (![managedFileCount, ignoredBytes, maximumDurationMs].every(Number.isSafeInteger)
   || managedFileCount < 1 || ignoredBytes < 0 || maximumDurationMs < 1) {
   throw new TypeError("INVALID_MANAGED_WORKSPACE_BENCHMARK_CONFIGURATION");
