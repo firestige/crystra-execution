@@ -48,7 +48,7 @@ The default Source is the configured `firestige/crystra-workflow-package` GitHub
 
 The only public DSH plugin is `dsh-crystra`, owned and registered by [firestige/crystra-dsh](https://github.com/firestige/crystra-dsh). Its release pins this core as an ordinary, exact GitHub Release tarball dependency. Follow that repository for plugin installation and setup; no separate Execution plugin or installer is distributed.
 
-Crystra candidates are being prepared; no Crystra release is available yet. `packages/dsh-intake` is a private regression fixture pending consolidation into that plugin.
+Crystra RC artifacts are available for isolated qualification. `packages/dsh-intake` is a private regression fixture pending consolidation into that plugin.
 
 ## Commands
 
@@ -120,3 +120,7 @@ git clone https://github.com/firestige/crystra-execution.git
 ## License
 
 [Apache-2.0](LICENSE)
+
+Exact Workflow Package resolution can consume one qualified aggregate Crystra Workflow RC when no package-scoped release exists. It verifies the candidate receipt, metadata digest, all four asset digests, and source/contract bindings before admitting the archive. Multiple matching candidates fail closed; a package-scoped release takes precedence. This enables RC combination qualification without publishing GA.
+
+The `latest` selector continues to exclude aggregate RCs; request an exact `name@version` for candidate integration.

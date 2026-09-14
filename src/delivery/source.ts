@@ -14,6 +14,9 @@ type Asset = Readonly<{ name: string; url: string }>;
 type Release = Readonly<{ tag: string; draft: boolean; prerelease: boolean; assets: readonly unknown[] }>;
 type PackageRecord = Readonly<{
   name: string; version: string; archive: Asset; descriptor: Asset; checksum: Asset; provenance: Asset;
+  qualification?: Readonly<{
+    revision: string; contractRevision: string; packageDigest: string; assets: ReadonlyMap<string, string>;
+  }>;
 }>;
 
 function digest(bytes: Uint8Array): string {
@@ -161,6 +164,7 @@ function validProvenance(record: PackageRecord, metadata: ScopedMetadata, body: 
     && subject.name === record.archive.name && subject.sha256 === metadata.digest
     && typeof source === "object" && !Array.isArray(source) && exactKeys(source, ["repository", "revision"])
     && source.repository === repository
+    && (record.qualification === undefined || source.revision === record.qualification.revision && contract.revision === record.qualification.contractRevision)
     && typeof source.revision === "string" && /^[a-f0-9]{40}$/u.test(source.revision)
     && typeof contract === "object" && !Array.isArray(contract) && exactKeys(contract, ["repository", "revision"])
     && contract.repository === "firestige/crystra-contracts" && contract.revision === metadata.provenance.contractRevision
@@ -176,6 +180,135 @@ export class GitHubWorkflowPackageSource implements WorkflowPackageSource {
 
   async #request(url: string): Promise<Readonly<{ status: number; body: Uint8Array }> | undefined> {
     try { return await this.network.request(url); } catch { return undefined; }
+  }
+
+  async #aggregateRecord(
+    item: Release,
+    request: WorkflowPackageSourceRequest,
+  ): Promise<PackageRecord | "INVALID" | "UNAVAILABLE" | undefined> {
+    if (
+      !item.prerelease ||
+      !/^crystra-workflow-package-v\d+\.\d+\.\d+-rc\.[1-9]\d*$/.test(item.tag)
+    )
+      return undefined;
+    const assets = item.assets.map(asset);
+    if (assets.some((a) => a === undefined)) return "INVALID";
+    const all = assets as Asset[];
+    const manifestAsset = oneAsset(all, "release-metadata.json"),
+      receiptAsset = oneAsset(all, "release-qualification.json");
+    if (!manifestAsset || !receiptAsset) return "INVALID";
+    const [manifestResponse, receiptResponse] = await Promise.all([
+      this.#request(manifestAsset.url),
+      this.#request(receiptAsset.url),
+    ]);
+    if (
+      !manifestResponse ||
+      !receiptResponse ||
+      [manifestResponse, receiptResponse].some(
+        (r) => r.status < 200 || r.status >= 300,
+      )
+    )
+      return "UNAVAILABLE";
+    if (
+      manifestResponse.body.byteLength > 2_097_152 ||
+      receiptResponse.body.byteLength > 262_144
+    )
+      return "INVALID";
+    const m = json(manifestResponse.body),
+      q = json(receiptResponse.body);
+    if (
+      !m ||
+      !q ||
+      m.schemaVersion !== "crystra.workflow-assets-release@2.0.0" ||
+      m.repository !== this.configuration.repository ||
+      typeof m.revision !== "string" ||
+      !/^[a-f0-9]{40}$/.test(m.revision) ||
+      !Array.isArray(m.packages) ||
+      q.schemaVersion !== "crystra.release-qualification@1.0.0" ||
+      q.candidateTag !== item.tag ||
+      q.commit !== m.revision ||
+      q.artifactMetadataSha256 !== digest(manifestResponse.body)
+    )
+      return "INVALID";
+    const pass = (value: unknown) =>
+      value !== null &&
+      typeof value === "object" &&
+      (value as Record<string, unknown>).status === "PASS";
+    if (!pass(q.localAcceptance) || !pass(q.remoteQualification))
+      return "INVALID";
+    const contract = m.contract as Record<string, unknown> | null;
+    if (
+      !contract ||
+      contract.repository !== "firestige/crystra-contracts" ||
+      typeof contract.revision !== "string" ||
+      !/^[a-f0-9]{40}$/.test(contract.revision)
+    )
+      return "INVALID";
+    const matches = m.packages.filter(
+      (value) =>
+        value &&
+        typeof value === "object" &&
+        value.package?.name === request.name &&
+        request.version.kind === "EXACT" &&
+        value.package?.version === request.version.value,
+    );
+    if (!matches.length) return undefined;
+    if (matches.length !== 1) return "INVALID";
+    const selected = matches[0] as {
+      tag?: unknown;
+      package: { name: string; version: string; digest: string };
+      assets?: unknown[];
+    };
+    const coordinates = {
+      name: selected.package.name,
+      version: selected.package.version,
+    };
+    if (
+      selected.tag !==
+        `crystra-workflow-package/${coordinates.name}/v${coordinates.version}` ||
+      !/^sha256:[a-f0-9]{64}$/.test(selected.package.digest) ||
+      !Array.isArray(selected.assets) ||
+      selected.assets.length !== 4
+    )
+      return "INVALID";
+    const expected = new Map<string, string>();
+    const subset: Asset[] = [];
+    for (const entry of selected.assets) {
+      if (!entry || typeof entry !== "object") return "INVALID";
+      const value = entry as Record<string, unknown>;
+      if (
+        typeof value.name !== "string" ||
+        typeof value.sha256 !== "string" ||
+        !/^sha256:[a-f0-9]{64}$/.test(value.sha256) ||
+        expected.has(value.name)
+      )
+        return "INVALID";
+      const found = oneAsset(all, value.name);
+      if (!found) return "INVALID";
+      expected.set(value.name, value.sha256);
+      subset.push(found);
+    }
+    const record = scopedRecord(
+      {
+        ...item,
+        assets: subset.map((a) => ({
+          name: a.name,
+          browser_download_url: a.url,
+        })),
+        prerelease: semver(coordinates.version)?.prerelease ?? false,
+      },
+      coordinates,
+    );
+    if (!record) return "INVALID";
+    return {
+      ...record,
+      qualification: {
+        revision: m.revision,
+        contractRevision: contract.revision,
+        packageDigest: selected.package.digest,
+        assets: expected,
+      },
+    };
   }
 
   async fetch(request: WorkflowPackageSourceRequest): Promise<WorkflowPackageSourceResult> {
@@ -212,6 +345,14 @@ export class GitHubWorkflowPackageSource implements WorkflowPackageSource {
       }
     }
 
+    if (!records.length && request.version.kind === "EXACT") {
+      for (const item of releases) {
+        const record = await this.#aggregateRecord(item, request);
+        if (typeof record === "string") return Object.freeze({ kind: record });
+        if (record) records.push(record);
+      }
+    }
+
     const versions = new Map<string, PackageRecord>();
     for (const record of records) {
       if (versions.has(record.version)) return Object.freeze({ kind: "INVALID" });
@@ -232,17 +373,24 @@ export class GitHubWorkflowPackageSource implements WorkflowPackageSource {
 
     const descriptorResponse = await this.#request(selected.descriptor.url);
     if (descriptorResponse === undefined || descriptorResponse.status < 200 || descriptorResponse.status >= 300) return Object.freeze({ kind: "UNAVAILABLE" });
+    if (selected.qualification && (digest(descriptorResponse.body) !== selected.qualification.assets.get(selected.descriptor.name)
+      || (json(descriptorResponse.body)?.package as Record<string, unknown> | undefined)?.digest !== selected.qualification.packageDigest)) {
+      return Object.freeze({kind: "DIGEST_MISMATCH"});
+    }
     const metadata = scopedDescriptor(selected, descriptorResponse.body);
     if (metadata === undefined) return Object.freeze({ kind: "INVALID" });
     const provenanceResponse = await this.#request(selected.provenance.url);
     if (provenanceResponse === undefined || provenanceResponse.status < 200 || provenanceResponse.status >= 300) return Object.freeze({ kind: "UNAVAILABLE" });
+    if (selected.qualification && digest(provenanceResponse.body) !== selected.qualification.assets.get(selected.provenance.name)) return Object.freeze({kind: "DIGEST_MISMATCH"});
     if (digest(provenanceResponse.body) !== metadata.provenance?.digest) return Object.freeze({ kind: "DIGEST_MISMATCH" });
     if (!validProvenance(selected, metadata, provenanceResponse.body, this.configuration.repository)) return Object.freeze({ kind: "INVALID" });
     const checksumResponse = await this.#request(selected.checksum.url);
     if (checksumResponse === undefined || checksumResponse.status < 200 || checksumResponse.status >= 300) return Object.freeze({ kind: "UNAVAILABLE" });
+    if (selected.qualification && digest(checksumResponse.body) !== selected.qualification.assets.get(selected.checksum.name)) return Object.freeze({kind: "DIGEST_MISMATCH"});
     if (Buffer.from(checksumResponse.body).toString("utf8") !== `${metadata.digest.slice(7)}  ${selected.archive.name}\n`) return Object.freeze({ kind: "DIGEST_MISMATCH" });
     const archiveResponse = await this.#request(selected.archive.url);
     if (archiveResponse === undefined || archiveResponse.status < 200 || archiveResponse.status >= 300) return Object.freeze({ kind: "UNAVAILABLE" });
+    if (selected.qualification && digest(archiveResponse.body) !== selected.qualification.assets.get(selected.archive.name)) return Object.freeze({kind: "DIGEST_MISMATCH"});
     if (archiveResponse.body.byteLength === 0 || archiveResponse.body.byteLength > MAX_ARCHIVE_BYTES
       || archiveResponse.body.byteLength !== metadata.bytes || digest(archiveResponse.body) !== metadata.digest) return Object.freeze({ kind: "DIGEST_MISMATCH" });
     const archive = Uint8Array.from(archiveResponse.body);

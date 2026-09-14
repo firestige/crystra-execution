@@ -198,3 +198,164 @@ describe("package-scoped GitHub Workflow Source", () => {
     expect(pages).toBe(10);
   });
 });
+
+function aggregateFixture(tag = "crystra-workflow-package-v0.1.0-rc.1") {
+  const item = packageRelease({ name: "demo", version: "2.0.0" });
+  const manifest = bytes({
+    schemaVersion: "crystra.workflow-assets-release@2.0.0",
+    repository: configuration.repository,
+    revision: "a".repeat(40),
+    contract: {
+      repository: "firestige/crystra-contracts",
+      revision: "b".repeat(40),
+    },
+    packages: [
+      {
+        tag: item.release.tag_name,
+        package: {
+          name: "demo",
+          version: "2.0.0",
+          digest: `sha256:${"c".repeat(64)}`,
+        },
+        assets: item.release.assets.map((a, i) => ({
+          kind: ["archive", "descriptor", "checksum", "provenance"][i],
+          name: a.name,
+          bytes: item.responses.get(a.browser_download_url)!.body.byteLength,
+          sha256: sha256(item.responses.get(a.browser_download_url)!.body),
+        })),
+      },
+    ],
+  });
+  const qualification = bytes({
+    schemaVersion: "crystra.release-qualification@1.0.0",
+    candidateTag: tag,
+    commit: "a".repeat(40),
+    artifactMetadataSha256: sha256(manifest),
+    localAcceptance: { status: "PASS" },
+    remoteQualification: { status: "PASS" },
+  });
+  item.responses.set(`https://example.test/${tag}/metadata`, {
+    status: 200,
+    body: manifest,
+  });
+  item.responses.set(`https://example.test/${tag}/qualification`, {
+    status: 200,
+    body: qualification,
+  });
+  return {
+    responses: item.responses,
+    release: {
+      ...item.release,
+      tag_name: tag,
+      prerelease: true,
+      assets: [
+        ...item.release.assets,
+        {
+          name: "release-metadata.json",
+          browser_download_url: `https://example.test/${tag}/metadata`,
+        },
+        {
+          name: "release-qualification.json",
+          browser_download_url: `https://example.test/${tag}/qualification`,
+        },
+      ],
+    },
+  };
+}
+describe("qualified aggregate Workflow RC", () => {
+  it("resolves an exact package without publishing GA, while latest excludes the RC", async () => {
+    const f = aggregateFixture();
+    const s = sourceFromReleases([f.release], f.responses);
+    await expect(
+      s.fetch({ name: "demo", version: { kind: "EXACT", value: "2.0.0" } }),
+    ).resolves.toMatchObject({
+      kind: "FOUND",
+      candidate: { exactVersion: "2.0.0" },
+    });
+    await expect(
+      s.fetch({ name: "demo", version: { kind: "LATEST" } }),
+    ).resolves.toEqual({ kind: "NOT_FOUND" });
+  });
+  it("rejects unqualified or changed candidate metadata", async () => {
+    const f = aggregateFixture();
+    f.responses.set(f.release.assets.at(-1)!.browser_download_url, {
+      status: 200,
+      body: bytes({}),
+    });
+    await expect(
+      sourceFromReleases([f.release], f.responses).fetch({
+        name: "demo",
+        version: { kind: "EXACT", value: "2.0.0" },
+      }),
+    ).resolves.toEqual({ kind: "INVALID" });
+  });
+  it("fails closed for two candidate sets offering the same exact package", async () => {
+    const a = aggregateFixture(),
+      b = aggregateFixture("crystra-workflow-package-v0.1.0-rc.2");
+    await expect(
+      sourceFromReleases(
+        [a.release, b.release],
+        new Map([...a.responses, ...b.responses]),
+      ).fetch({ name: "demo", version: { kind: "EXACT", value: "2.0.0" } }),
+    ).resolves.toEqual({ kind: "INVALID" });
+  });
+  it("uses the scoped release when present without consulting candidate receipts", async () => {
+    const a = aggregateFixture(),
+      stable = packageRelease({ name: "demo", version: "2.0.0" });
+    await expect(
+      sourceFromReleases([a.release, stable.release], stable.responses).fetch({
+        name: "demo",
+        version: { kind: "EXACT", value: "2.0.0" },
+      }),
+    ).resolves.toMatchObject({ kind: "FOUND" });
+  });
+});
+
+describe("aggregate RC trust boundaries", () => {
+  const mutations: [string, (manifest: ReturnType<typeof JSON.parse>) => void][] = [
+    ["wrong repository", m => {m.repository="other/repository";}],
+    ["invalid source revision", m => {m.revision="branch-main";}],
+    ["missing contract", m => {m.contract=null;}],
+    ["invalid contract revision", m => {m.contract.revision="latest";}],
+    ["invalid package set", m => {m.packages=null;}],
+    ["duplicate exact packages", m => {m.packages.push(m.packages[0]);}],
+    ["wrong scoped package tag", m => {m.packages[0].tag="other";}],
+    ["invalid content digest", m => {m.packages[0].package.digest="changed";}],
+    ["missing declared asset", m => {m.packages[0].assets.pop();}],
+    ["malformed asset entry", m => {m.packages[0].assets[0]=null;}],
+    ["duplicate declared asset", m => {m.packages[0].assets[1]=m.packages[0].assets[0];}],
+    ["unpublished declared asset", m => {m.packages[0].assets[0].name="absent.tar.gz";}],
+  ];
+  it.each(mutations)("rejects %s even when the receipt hashes that metadata", async(_name, mutate)=>{
+    const f=aggregateFixture();
+    const metadataUrl=f.release.assets.at(-2)!.browser_download_url;
+    const receiptUrl=f.release.assets.at(-1)!.browser_download_url;
+    const m=JSON.parse(Buffer.from(f.responses.get(metadataUrl)!.body).toString());mutate(m);
+    const raw=bytes(m), q=JSON.parse(Buffer.from(f.responses.get(receiptUrl)!.body).toString());q.artifactMetadataSha256=sha256(raw);
+    f.responses.set(metadataUrl,{status:200,body:raw});f.responses.set(receiptUrl,{status:200,body:bytes(q)});
+    await expect(sourceFromReleases([f.release],f.responses).fetch({name:"demo",version:{kind:"EXACT",value:"2.0.0"}})).resolves.toEqual({kind:"INVALID"});
+  });
+  it("reports an unavailable receipt without accepting the package",async()=>{
+    const f=aggregateFixture();f.responses.delete(f.release.assets.at(-1)!.browser_download_url);
+    await expect(sourceFromReleases([f.release],f.responses).fetch({name:"demo",version:{kind:"EXACT",value:"2.0.0"}})).resolves.toEqual({kind:"UNAVAILABLE"});
+  });
+  it("rejects a changed descriptor despite an internally consistent archive checksum",async()=>{
+    const f=aggregateFixture(),url=f.release.assets.find(a=>a.name==='workflow-package-demo-2.0.0.json')!.browser_download_url;
+    f.responses.set(url,{status:200,body:Buffer.concat([f.responses.get(url)!.body,Buffer.from(' ')])});
+    await expect(sourceFromReleases([f.release],f.responses).fetch({name:"demo",version:{kind:"EXACT",value:"2.0.0"}})).resolves.toEqual({kind:"DIGEST_MISMATCH"});
+  });
+});
+
+it("does not resolve an unrelated package from a qualified aggregate", async()=>{
+  const f=aggregateFixture();
+  await expect(sourceFromReleases([f.release],f.responses).fetch({name:"another-package",version:{kind:"EXACT",value:"2.0.0"}})).resolves.toEqual({kind:"NOT_FOUND"});
+});
+it("rejects an aggregate that omits its qualification asset", async()=>{
+  const f=aggregateFixture();f.release.assets.pop();
+  await expect(sourceFromReleases([f.release],f.responses).fetch({name:"demo",version:{kind:"EXACT",value:"2.0.0"}})).resolves.toEqual({kind:"INVALID"});
+});
+it("bounds aggregate metadata before parsing it", async()=>{
+  const f=aggregateFixture(),url=f.release.assets.at(-2)!.browser_download_url;
+  f.responses.set(url,{status:200,body:new Uint8Array(2_097_153)});
+  await expect(sourceFromReleases([f.release],f.responses).fetch({name:"demo",version:{kind:"EXACT",value:"2.0.0"}})).resolves.toEqual({kind:"INVALID"});
+});
