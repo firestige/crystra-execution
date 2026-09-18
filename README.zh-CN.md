@@ -95,6 +95,29 @@ Crystra 候选仍在准备中，尚无可安装的 Crystra 发布。`packages/ds
 
 默认 Copilot factory 注册 `provider.copilot@1.0.78`，通过精确锁定的 SDK 复用本机登录；默认 Codex factory 注册 `provider.codex@0.144.5`，复用 Codex CLI 的本机登录状态。两条路径都不会向 embedding host 索取 token material。每个 Delivery realm 只接纳已为 Role 冻结的 model coordinate；runtime、登录、model、恢复或 binding 发生漂移时一律 fail closed。
 
+
+### 私有本地包与 RC
+
+自行修改的 Workflow 无须先公开发布。将编译好的包目录（含 `definition/package.json` 及其声明的资源）打包并登记到本地目录：
+
+```sh
+workflow-local-source pack /绝对路径/my-workflow /绝对路径/private-workflows/source.json
+```
+
+源码构建后可使用 `node dist/configuration/local-source-cli.js pack ...`。命令输出精确 selector 和应写入 Execution 安装配置的 `workflowSource`：
+
+```json
+{
+  "kind": "adapter",
+  "adapterKey": "workflow.local.v1",
+  "adapterConfigFile": "/绝对路径/private-workflows/source.json"
+}
+```
+
+本地源仅接受 `my-workflow@1.2.3-rc.1` 等精确版本；裸名称、`latest`、版本范围均不能选取本地包。默认公共 GitHub 源拒绝预发布版本，包括显式指定的 RC；本地源不会回退到网络源。
+
+目录记录包名、精确版本、相对归档路径和 SHA-256；Execution 校验归档并继续执行同样的 schema、快照与资源内容校验。本地缓存独立，缓存命中也不能绕过当前本地源校验。修改 Workflow 后，重新生成有效摘要和快照并使用新的精确版本（如 `1.2.3-rc.2`）；相同坐标覆盖不同内容会被拒绝。已 admission 的 Delivery 恢复仍使用原冻结绑定。
+
 ## 获取源码
 
 本仓库通常作为 [crystra](https://github.com/firestige/crystra) 的 submodule 使用：
@@ -146,3 +169,8 @@ git clone https://github.com/firestige/crystra-execution.git
 Embedding 可从 `crystra-execution` 导入并注册 `createDshAgentProviderFactory({ stateDirectory, credentialPath, credentialRef, baseURL, turnTimeoutMs })`，仅 `stateDirectory` 必填。这些参数控制连接与认证，不提供模型 fallback。默认 production factory 使用 `executionTimeoutMs` 作为回合超时。
 
 会话按 Delivery、Manifest 与 canonical worktree 隔离持久化；恢复要求 opaque identity 及 session/Role/model/连接绑定一致。取消、超时和接口错误会返回明确的失败状态，超时会话不能再次执行。Delivery realm 释放时会清理其会话和 runtime。
+### 管控平面的 Provider 模型目录
+
+`await composition.control.planningCapabilities()` 是 Execution 的只读规划接口。每次查询由已注册 Provider 获取本机登录账号的原生模型目录，不创建 Session 或 Delivery，也不读取其他会话。`providers[].modelCatalog` 返回 `state`（`available`、`unavailable` 或 `unsupported`）及 `models: [{provider, model}]`，其中两字段可直接用于 Plan 的 `roleBindings` 模型配置。Provider 身份和精确版本仍来自同一条 Provider 描述；外部 Chat 的模型选择不决定 Role 绑定。
+
+Crystra 在每次管控对话及自动续轮前等待并刷新此接口。查询失败时只返回明确的不可用状态，不填默认模型、不要求用户查询源码或手填 ID。目录表示当前可选能力；正式 Plan 确认与 Delivery 入场仍执行原有绑定校验。

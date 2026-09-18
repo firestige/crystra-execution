@@ -102,3 +102,18 @@ describe("Agent Provider factory registry", () => {
     })).toThrowError(expect.objectContaining({ code: "PROVIDER_FACTORY_DESCRIPTOR_MISMATCH" }));
   });
 });
+
+it("queries exact native models without acquiring a Delivery and isolates unavailable providers", async () => {
+  const native = factory("provider.codex", "0.144.5", "codex-cli", []);
+  const registry = new AgentProviderFactoryRegistry([
+    Object.freeze({...native, listModels: async () => [{provider:"openai",model:"actual-model"}]}),
+    Object.freeze({...factory("provider.copilot", "1.0.78", "copilot-sdk", []), listModels: async () => {throw Error("secret diagnostics");}}),
+    factory("provider.dsh", "1.0.0", "dsh-headless", []),
+  ]);
+  const catalog = await registry.modelCatalog();
+  expect(catalog[0]).toMatchObject({identity:"provider.codex",modelCatalog:{state:"available",models:[{provider:"openai",model:"actual-model"}]}});
+  expect(catalog[1]).toMatchObject({identity:"provider.copilot",modelCatalog:{state:"unavailable",models:[],error:"PROVIDER_MODEL_QUERY_FAILED"}});
+  expect(catalog[2]).toMatchObject({modelCatalog:{state:"unsupported",models:[]}});
+  expect(JSON.stringify(catalog)).not.toContain("secret diagnostics");
+  expect(native.acquire).not.toHaveBeenCalled();
+});

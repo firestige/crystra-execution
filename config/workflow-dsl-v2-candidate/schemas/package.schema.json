@@ -37,7 +37,7 @@
           "pattern": "^[a-z][a-z0-9-]*$"
         },
         "version": {
-          "$ref": "urn:agentops:workflow-dsl:1.1.0:meta#/$defs/version"
+          "$ref": "urn:agentops:workflow-dsl:1.1.0:meta#/$defs/packageVersion"
         },
         "digest": {
           "$ref": "urn:agentops:workflow-dsl:1.1.0:meta#/$defs/contentIdentity",

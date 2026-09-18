@@ -120,3 +120,13 @@ describe("repository Role-to-Provider/model bindings", () => {
     expect(error).not.toHaveProperty("cause");
   });
 });
+
+it('formalizes only the exact approved binding document and rejects redirected control directories',async()=>{
+ const api=await import('../../src/delivery/repository-model-bindings.js');
+ const root=await worktree(),doc={schemaVersion:'execution.repository-role-provider-bindings@1.0.0',bindings:{writer:{agentProvider:{identity:'agent.codex',version:'1.0.0'},model:{provider:'openai',model:'gpt-5'}}}};
+ expect(typeof api.saveRepositoryModelBindings).toBe('function');
+ await expect(api.saveRepositoryModelBindings(root,doc,'sha256:wrong')).rejects.toThrow();
+ await api.saveRepositoryModelBindings(root,doc,digest(doc));expect(await loadRepositoryModelBindings(root)).toMatchObject({documentState:'PRESENT',documentDigest:digest(doc)});
+ const redirected=await worktree();await symlink(join(root,'.crystra'),join(redirected,'.crystra'));
+ await expect(api.saveRepositoryModelBindings(redirected,doc,digest(doc))).rejects.toThrow();
+});

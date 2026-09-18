@@ -95,6 +95,29 @@ For host-neutral embedding, import `ExecutionApplicationFactory`, `DefaultExecut
 
 The default Copilot factory registers `provider.copilot@1.0.78` and reuses the local logged-in user through the exact bundled SDK. The default Codex factory registers `provider.codex@0.144.5` and reuses Codex CLI's local login state. Neither path asks the embedding host for token material. Every Delivery realm admits only model coordinates frozen for its Roles and fails closed on runtime, login, model, recovery, or binding drift.
 
+
+### Private local packages and release candidates
+
+Unpublished Workflows do not require a GitHub release. Pack a compiled package containing `definition/package.json` and its declared resources:
+
+```sh
+workflow-local-source pack /absolute/path/my-workflow /absolute/path/private-workflows/source.json
+```
+
+For a source checkout, use `node dist/configuration/local-source-cli.js pack ...` after building. The command prints the exact selector and the `workflowSource` configuration to put in the Execution installation configuration:
+
+```json
+{
+  "kind": "adapter",
+  "adapterKey": "workflow.local.v1",
+  "adapterConfigFile": "/absolute/path/private-workflows/source.json"
+}
+```
+
+This source accepts only exact selectors such as `my-workflow@1.2.3-rc.1`. Bare names, `latest`, and version ranges cannot select a local package. The default public GitHub source excludes prereleases, including explicit RC selectors. There is no network fallback from the local source.
+
+The catalog records the name, exact version, relative archive path, and SHA-256. Execution checks the archive bytes and uses the same schema/snapshot/resource validator. Local packages use a separate cache; a cached entry does not bypass current local-source validation. After changing a Workflow, regenerate valid digests/snapshot and use a new exact version (for example `1.2.3-rc.2`); packing different bytes over an existing coordinate is rejected. Recovery of an admitted Delivery keeps its frozen binding.
+
 ## Get the source
 
 This repository is normally consumed as a submodule of [crystra](https://github.com/firestige/crystra):

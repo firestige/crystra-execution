@@ -528,6 +528,20 @@ export class CodexCliProviderRealmFactory implements AgentProviderRealmFactory {
     Object.freeze(this);
   }
 
+  readonly listModels = async () => {
+    const configuration = this.#configuration;
+    const active = new Set<ChildProcessWithoutNullStreams>();
+    const run = (args: readonly string[]) => execute(configuration.executablePath,args,{cwd:process.cwd(),timeoutMs:configuration.startupTimeoutMs,shutdownTimeoutMs:configuration.shutdownTimeoutMs,active});
+    const version = await run(["--version"]);
+    if (version.exitCode !== 0 || version.stdout.trim() !== `codex-cli ${EXACT_VERSION}`) throw new CodexCliProviderError("CODEX_ADMISSION_FAILED", "exact CLI version unavailable");
+    const login = await run(["login","status"]);
+    if (login.exitCode !== 0) throw new CodexCliProviderError("CODEX_ADMISSION_FAILED", "local login unavailable");
+    const result = await run(["debug","models"]);
+    const models = result.exitCode === 0 ? parseCatalog(result.stdout) : undefined;
+    if (!models) throw new CodexCliProviderError("CODEX_ADMISSION_FAILED", "model catalog unavailable");
+    return models.map(model => ({provider:"openai",model}));
+  };
+
   readonly acquire = async (request: AgentProviderDeliveryRealmRequest): Promise<AgentProviderDeliveryRealmLease> => {
     exactRealmRequest(request);
     await access(this.#configuration.executablePath, constants.X_OK).catch(() => {

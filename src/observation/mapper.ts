@@ -11,6 +11,7 @@ const SPAN_ID = /^[a-f0-9]{16}$/u;
 const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._:/@-]*$/u;
 const IDENTITY = /^[A-Za-z][A-Za-z0-9._-]{0,127}$/u;
 const SHA256 = /^sha256:[a-f0-9]{64}$/u;
+const PACKAGE_VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 const STANDARD = new Set(["gen_ai.operation.name","gen_ai.agent.id","gen_ai.agent.name","gen_ai.agent.version","gen_ai.provider.name","gen_ai.request.model","gen_ai.response.model","gen_ai.tool.name","gen_ai.tool.type","gen_ai.tool.call.id","gen_ai.usage.input_tokens","gen_ai.usage.output_tokens","error.type"]);
 
 export interface ObservationMapperConfig { readonly serviceName: string; readonly serviceVersion: string }
@@ -95,7 +96,7 @@ function manifestProjectionComplete(fields: Readonly<Partial<Record<ObservationF
     || !plain(projection.workflow) || !keys(projection.workflow, ["package_name","exact_package_version","package_digest","workflow_id","workflow_version","snapshot_id","snapshot_digest"])
     || typeof projection.workflow.package_name !== "string" || !/^[a-z][a-z0-9-]*$/u.test(projection.workflow.package_name)
     || typeof projection.workflow.exact_package_version !== "string" || typeof projection.workflow.workflow_version !== "string"
-    || !/^\d+\.\d+\.\d+$/u.test(projection.workflow.exact_package_version) || !/^\d+\.\d+\.\d+$/u.test(projection.workflow.workflow_version)
+    || !PACKAGE_VERSION.test(projection.workflow.exact_package_version) || !/^\d+\.\d+\.\d+$/u.test(projection.workflow.workflow_version)
     || typeof projection.workflow.workflow_id !== "string" || !IDENTITY.test(projection.workflow.workflow_id)
     || projection.workflow.workflow_id !== fields.C08 || fields.C49 !== `${fields.C08}@1`
     || typeof projection.workflow.snapshot_id !== "string" || !IDENTITY.test(projection.workflow.snapshot_id)

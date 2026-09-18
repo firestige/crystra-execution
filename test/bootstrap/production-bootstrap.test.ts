@@ -13,6 +13,7 @@ import {
   ProductionHostOperationRegistryError,
   createProductionHostOperationHandlers,
   getExecutionApplicationControl,
+  getExecutionControlPlaneProjection,
   type ExecutionBootstrapDependencies,
   type AgentProviderDeliveryRealmRequest,
   type AgentProviderRealmFactory,
@@ -734,6 +735,23 @@ describe("Wave 6 production bootstrap", () => {
     await expect(control.finishAction({ correlation: "intake-correlation-1", prompt: { text: "final grilling answer", attachments: [] } }))
       .resolves.toMatchObject({ kind: "RECOVERY", deliveryId: "delivery-production-interaction" });
     await expect(execution).resolves.toMatchObject({ kind: "TERMINAL", deliveryId: "delivery-production-interaction" });
+    const completedDelivery = (await getExecutionControlPlaneProjection(application).snapshot()).deliveries.find(item => item.deliveryId === "delivery-production-interaction")!;
+    const resultRequest = {taskId:completedDelivery.task.identity,deliveryId:completedDelivery.deliveryId};
+    const runProjection=await control.readWorkflowRun(resultRequest);
+    expect(runProjection).toMatchObject({state:'available',value:{deliveryId:resultRequest.deliveryId,taskId:resultRequest.taskId,status:'terminal-proposal'}});
+    await expect(control.readWorkflowRun({...resultRequest,taskId:'other-task'})).resolves.toMatchObject({state:'unavailable'});
+
+    await expect(control.readBusinessResult(resultRequest)).resolves.toMatchObject({state:"available"});
+    const preserved=await control.readBusinessResult(resultRequest);
+    if(preserved.state!=="available")throw Error("expected preserved result");
+    await expect(control.readArtifactContent({...resultRequest,resultIdentity:"wrong",artifactId:"missing"})).resolves.toMatchObject({state:"unavailable",reason:"ARTIFACT_RESULT_MISMATCH"});
+    await expect(control.readArtifactContent({...resultRequest,resultIdentity:preserved.reference.identity,artifactId:"missing"})).resolves.toMatchObject({state:"unavailable",reason:"ARTIFACT_NOT_IN_RESULT"});
+    for(const artifactId of Object.keys(preserved.result.artifacts)){
+      await expect(control.readArtifactContent({...resultRequest,resultIdentity:preserved.reference.identity,artifactId})).resolves.toMatchObject({state:"available"});
+      await expect(control.readArtifactContent({...resultRequest,taskId:"other-task",resultIdentity:preserved.reference.identity,artifactId})).resolves.toMatchObject({state:"unavailable"});
+    }
+
+    await expect(control.readBusinessResult({...resultRequest,taskId:"other-task"})).resolves.toMatchObject({state:"unavailable",reason:"DELIVERY_RESULT_NOT_FOUND"});
     await expect(control.finishAction({ correlation: "intake-correlation-1" }))
       .resolves.toMatchObject({ kind: "ERROR", code: "ACTION_NOT_AWAITING_INPUT" });
     await application.close();
@@ -741,6 +759,8 @@ describe("Wave 6 production bootstrap", () => {
 
     const restarted = await new DefaultExecutionApplicationFactory({ agentProviderFactories: [implementationProvider({ next: () => ++requestCount })] }).create(configFile, dependencies);
     const restartedControl = getExecutionApplicationControl(restarted);
+    await expect(restartedControl.readWorkflowRun(resultRequest)).resolves.toEqual(runProjection);
+    await expect(restartedControl.readBusinessResult(resultRequest)).resolves.toMatchObject({state:"available"});
     expect(await restartedControl.list()).toHaveLength(1);
     restartedControl.attach("delivery-production-parallel", "intake-correlation-2");
     const restarting = restarted.start();

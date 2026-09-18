@@ -884,3 +884,20 @@ describe("Git custody", () => {
     expect(readFileSync(path.join(f.repository, "ignored.log"), "utf8")).toBe("later rejected value\n");
   });
 });
+
+it("reads only the exact preserved business result after restart and rejects changed bytes", async () => {
+ const f=fixture();const custody=createGitCustody({recordsDirectory:f.records as AbsolutePath});
+ const baseline=await custody.establishBaseline({delivery:f.delivery,workspace:f.workspace});if(!baseline.ok)throw Error('baseline');
+ const {canonicalDigest}=await import('../../src/contracts/index.js');
+ const result={identity:stable<WorkflowResultId>('result-readable'),content:{greeting:'你好',reviewed:true,Z:'upper',a:'lower'},contentIdentity:canonicalDigest({greeting:'你好',reviewed:true,Z:'upper',a:'lower'}),artifacts:{}};
+ const saved=await custody.preserveResult({checkpoint:{identity:stable<CheckpointId>('checkpoint-readable'),stateIdentity:sha('readable-state'),thread:f.episode.thread,savepoint:{state:'known',value:baseline.value}},result});
+ if(!saved.ok)throw Error('preserve');
+ const repeated=await custody.preserveResult({checkpoint:{identity:stable<CheckpointId>('checkpoint-readable'),stateIdentity:sha('readable-state'),thread:f.episode.thread,savepoint:{state:'known',value:baseline.value}},result:{...result,artifacts:{[stable<ArtifactId>('artifact-new')]:{artifactIdentity:stable<ArtifactId>('artifact-new'),versionIdentity:stable<import('../../src/contracts/index.js').StableId<'artifact-version'>>('artifact-version-1'),contentIdentity:sha('content')}}}});
+ expect(repeated.ok).toBe(false);
+ const restarted=createGitCustody({recordsDirectory:f.records as AbsolutePath});
+ const read=await restarted.readPreservedResult(saved.value);expect(read.state).toBe('available');if(read.state==='available')expect(read.result).toEqual(result);
+ expect((await restarted.readPreservedResult({...saved.value,contentIdentity:sha('wrong')})).state).toBe('unavailable');
+ const file=readdirSync(f.records).find(n=>n.endsWith('.result.json'))!;
+ const altered=JSON.parse(readFileSync(path.join(f.records,file),'utf8'));altered.result.artifacts.injected={artifactIdentity:'fake',versionIdentity:'fake',contentIdentity:'fake'};writeFileSync(path.join(f.records,file),JSON.stringify(altered));
+ expect((await restarted.readPreservedResult(saved.value)).state).toBe('unavailable');
+});

@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { lstat, readFile, realpath, stat } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, readFile, realpath, stat, mkdir, writeFile, rename, unlink } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
 import { parseDocument } from "yaml";
@@ -173,4 +173,16 @@ export async function loadRepositoryModelBindings(canonicalWorktree: string): Pr
     documentDigest: canonicalDigest(parsed as JsonValue),
     bindings,
   });
+}
+
+/** Materialize the exact human-approved Plan configuration; admission still resolves capabilities. */
+export async function saveRepositoryModelBindings(canonicalWorktree:string,document:unknown,expectedDigest:string):Promise<RepositoryModelBindingsSnapshot>{
+ normalizeDocument(document);const bytes=JSON.stringify(document);
+ if(Buffer.byteLength(bytes)>MAX_DOCUMENT_BYTES||canonicalDigest(document as JsonValue)!==expectedDigest)throw new RepositoryModelBindingsError('REPOSITORY_MODEL_BINDINGS_INVALID');
+ if(!isAbsolute(canonicalWorktree))throw new RepositoryModelBindingsError('REPOSITORY_MODEL_BINDINGS_PATH_INVALID');
+ const root=await realpath(canonicalWorktree),directory=join(root,'.crystra');await mkdir(directory,{recursive:true});
+ if((await lstat(directory)).isSymbolicLink()||await realpath(directory)!==directory)throw new RepositoryModelBindingsError('REPOSITORY_MODEL_BINDINGS_PATH_INVALID');
+ const file=join(root,DOCUMENT_RELATIVE_PATH);try{if(!(await lstat(file)).isFile())throw new RepositoryModelBindingsError('REPOSITORY_MODEL_BINDINGS_PATH_INVALID');}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}
+ const temporary=file+'.'+randomUUID()+'.new';try{await writeFile(temporary,bytes,{mode:0o600,flag:'wx'});await rename(temporary,file);}finally{await unlink(temporary).catch(()=>undefined);}
+ return loadRepositoryModelBindings(root);
 }

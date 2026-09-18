@@ -8,6 +8,7 @@ export {
   AgentProviderFactoryRegistry,
   DeliveryAgentProviderRealmBroker,
   type AgentProviderRealmFactory,
+  type ProviderModelCatalogEntry,
   type ProviderAdapterKey,
 } from "../providers/provider.js";
 import type { AgentProviderRealmFactory } from "../providers/provider.js";

@@ -1,3 +1,7 @@
+import {WorkflowRunViewStore} from '../host/workflow-run-view.js';
+import {ArtifactContentStore,type ArtifactContentView} from '../host/artifact-content-store.js';
+import {DeliveryBusinessResultJournal, type DeliveryBusinessResultView} from "../delivery/business-result-journal.js";
+import {createGitCustody} from "../custody/git-custody.js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -9,6 +13,7 @@ import {
   DeliveryAgentProviderRealmBroker,
   createDefaultProductionAgentProviderFactories,
   type AgentProviderRealmFactory,
+  type ProviderModelCatalogEntry,
   type ProviderAdapterKey,
 } from "../composition/agent-provider-production.js";
 import { canonicalDigest, type FrozenJsonValue, type RunnerActivationContext } from "../contracts/index.js";
@@ -355,6 +360,10 @@ class ProductionAgentProviderRuntimeManager implements DeliveryRuntimeFactory {
 export interface ExecutionApplicationControl extends WorkflowIntakeControlPort {
   executeFromConversationWorkspace(request: ExecutionRequest, authorization: ConversationWorkspaceAuthorization): Promise<ExecutionResult>;
   bindingInventory(): Promise<readonly IntakeDeliveryBindingInventoryItem[]>;
+  planningCapabilities(): Promise<Readonly<{providers:readonly ProviderModelCatalogEntry[];workflowSource:Readonly<{kind:string;repository?:string;adapterKey?:string;adapterConfigFile?:string;exactVersionRequired?:boolean}>}>>;
+  readWorkflowRun(request: Readonly<{taskId:string;deliveryId:string}>): ReturnType<WorkflowRunViewStore['read']>;
+  readArtifactContent(request: Readonly<{taskId:string;deliveryId:string;resultIdentity:string;artifactId:string}>): Promise<ArtifactContentView>;
+  readBusinessResult(request: Readonly<{taskId: string; deliveryId: string}>): Promise<DeliveryBusinessResultView>;
   attach(deliveryId: string, correlation: string): void;
   waitForDelivery(correlation: string, timeoutMs: number): Promise<Readonly<{ deliveryId: string; worktree: string; deliveryBindingIdentity: string }> | undefined>;
   answerAction(request: Readonly<{ correlation: string; prompt: TaskPrompt }>): Promise<ExecutionResult>;
@@ -423,7 +432,9 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
       new WorkflowPackageSourceRegistry(this.#alternateSources),
     );
     const resolver = new WorkflowPackageResolver(
-      new WorkflowPackageStore({ readyRoot: config.paths.packageStoreRoot, stagingRoot: config.paths.stagingRoot }),
+      new WorkflowPackageStore({ readyRoot: source.cacheNamespace
+        ? path.join(config.paths.packageStoreRoot, "sources", createHash("sha256").update(source.cacheNamespace).digest("hex"))
+        : config.paths.packageStoreRoot, stagingRoot: config.paths.stagingRoot }),
       source,
       new FrozenWorkflowPackageValidatorV2({
         contractVersion: "2.0.0",
@@ -453,7 +464,9 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
     });
     const interactions = new ProductionInteractionBroker(dependencies.intake, invalidations.publish);
     const runtime = new ProductionAgentProviderRuntimeManager(config, dependencies, observation, interactions, this.#hostOperationFactories, agentProviders);
+    const businessResults = new DeliveryBusinessResultJournal(path.join(config.paths.stateRoot, "business-results"));
     const lifecycleOptions = {
+      results: Object.freeze({publish: businessResults.persist.bind(businessResults)}),
       resolver,
       manifests,
       snapshotRoot: `${config.paths.stateRoot}/prompt-snapshots`,
@@ -603,6 +616,18 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
     const control: ExecutionApplicationControl = Object.freeze({
       executeFromConversationWorkspace: (request: ExecutionRequest, authorization: ConversationWorkspaceAuthorization) => executeRequest(request, authorization),
       bindingInventory: readBindingInventory,
+      planningCapabilities:async()=>({providers:await agentProviders.modelCatalog(),workflowSource:{kind:config.workflowSource.kind,...(config.workflowSource.kind==='github'?{repository:config.workflowSource.repository}:{adapterKey:config.workflowSource.adapterKey,...(config.workflowSource.adapterKey==='workflow.local.v1'?{adapterConfigFile:config.workflowSource.adapterConfigFile,exactVersionRequired:true}:{})})}}),
+      readWorkflowRun: (request:Readonly<{taskId:string;deliveryId:string}>) => new WorkflowRunViewStore(path.join(config.paths.runner.root,segment(request.deliveryId),'checkpoints')).read(request),
+      async readArtifactContent(request:Readonly<{taskId:string;deliveryId:string;resultIdentity:string;artifactId:string}>){
+        const result=await businessResults.read(request,reference=>createGitCustody({recordsDirectory:path.join(config.paths.runner.root,segment(request.deliveryId),'custody') as import('../contracts/index.js').AbsolutePath}).readPreservedResult(reference));
+        if(result.state!=='available'||result.reference.identity!==request.resultIdentity)return {state:'unavailable' as const,reason:'ARTIFACT_RESULT_MISMATCH'};
+        const artifact=result.result.artifacts[request.artifactId as import('../contracts/index.js').ArtifactId];
+        if(!artifact)return {state:'unavailable' as const,reason:'ARTIFACT_NOT_IN_RESULT'};
+        return new ArtifactContentStore(path.join(config.paths.runner.root,segment(request.deliveryId),'checkpoints','artifact-content')).read(artifact);
+      },
+      readBusinessResult: (request: Readonly<{taskId: string; deliveryId: string}>) => businessResults.read(request, reference => createGitCustody({
+        recordsDirectory: path.join(config.paths.runner.root, segment(request.deliveryId), "custody") as import("../contracts/index.js").AbsolutePath,
+      }).readPreservedResult(reference)),
       async list() {
         return Object.freeze((await readBindingInventory()).map(({ deliveryBindingIdentity: _identity, ...item }) => Object.freeze(item))) as readonly IntakeDeliveryInventoryItem[];
       },

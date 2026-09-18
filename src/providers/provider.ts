@@ -185,7 +185,11 @@ export interface AgentProviderAdapter {
   dispose(): Promise<void>;
 }
 
+export type ProviderModel = Readonly<{ provider: string; model: string }>;
+export type ProviderModelCatalogEntry = AgentProviderFactoryDescriptor & Readonly<{ modelCatalog: Readonly<{state: "available" | "unavailable" | "unsupported"; models: readonly ProviderModel[]; error?: string}> }>;
+
 export interface AgentProviderRealmFactory {
+  readonly listModels?: () => Promise<readonly ProviderModel[]>;
   readonly descriptor: AgentProviderFactoryDescriptorDeclaration;
   acquire(request: AgentProviderDeliveryRealmRequest): Promise<AgentProviderDeliveryRealmLease>;
 }
@@ -230,10 +234,12 @@ function canonicalDigest(value: JsonValue): string {
 function captureFactory(candidate: AgentProviderRealmFactory): Readonly<{
   descriptor: AgentProviderFactoryDescriptor;
   acquire: AgentProviderRealmFactory["acquire"];
+  listModels?: AgentProviderRealmFactory["listModels"];
 }> {
-  const root = ownData(candidate, ["descriptor", "acquire"]);
+  const root = ownData(candidate, Object.hasOwn(candidate, "listModels") ? ["descriptor", "acquire", "listModels"] : ["descriptor", "acquire"]);
   const descriptor = ownData(root?.descriptor, ["schemaVersion", "identity", "version", "adapterKey", "capabilities"]);
   if (root === undefined || descriptor === undefined || typeof root.acquire !== "function"
+    || (Object.hasOwn(root, "listModels") && typeof root.listModels !== "function")
     || descriptor.schemaVersion !== "execution.agent-provider-factory@1.0.0"
     || typeof descriptor.identity !== "string" || !IDENTITY.test(descriptor.identity)
     || typeof descriptor.version !== "string" || !VERSION.test(descriptor.version)
@@ -253,6 +259,7 @@ function captureFactory(candidate: AgentProviderRealmFactory): Readonly<{
   return Object.freeze({
     descriptor: deepFreeze({ ...declaration, descriptorDigest: canonicalDigest(declaration as unknown as JsonValue) }),
     acquire: (root.acquire as AgentProviderRealmFactory["acquire"]).bind(candidate),
+    ...(typeof root.listModels === "function" ? {listModels: (root.listModels as NonNullable<AgentProviderRealmFactory["listModels"]>).bind(candidate)} : {}),
   });
 }
 
@@ -277,6 +284,21 @@ export class AgentProviderFactoryRegistry {
 
   descriptors(): readonly AgentProviderFactoryDescriptor[] {
     return this.#descriptors;
+  }
+
+  /** Read-only native capability query; never acquires a Delivery realm or Session. */
+  async modelCatalog(): Promise<readonly ProviderModelCatalogEntry[]> {
+    const entries: ProviderModelCatalogEntry[] = [];
+    for (const descriptor of this.#descriptors) {
+      const query = this.#factories.get(descriptor.identity)?.listModels;
+      if (!query) { entries.push({...descriptor,modelCatalog:{state:"unsupported",models:[]}}); continue; }
+      try {
+        const models = await query();
+        if (!Array.isArray(models) || models.some(m => !m || typeof m.provider !== "string" || !m.provider.trim() || typeof m.model !== "string" || !m.model.trim())) throw Error("INVALID_PROVIDER_MODELS");
+        entries.push({...descriptor,modelCatalog:{state:"available",models:models.map(({provider,model})=>({provider,model}))}});
+      } catch { entries.push({...descriptor,modelCatalog:{state:"unavailable",models:[],error:"PROVIDER_MODEL_QUERY_FAILED"}}); }
+    }
+    return deepFreeze(entries);
   }
 
   admit(reference: AgentProviderReference, requiredCapabilities: readonly string[]): AgentProviderFactoryDescriptor {

@@ -242,12 +242,13 @@ describe("M03 production owner-fact mapper", () => {
     });
   });
 
-  it("uses the Manifest Workflow name as the Task binding family without a closed allowlist", () => {
+  it.each(['2.0.0','2.0.1-rc.1'])("uses the Manifest Workflow name and exact package version %s without a closed allowlist", (version) => {
     const portable = manifestProjection();
     const projection = JSON.parse(portable.canonical);
     projection.delivery_id = "delivery-hello";
     projection.task_id = "task-hello";
     projection.workflow.package_name = "hello-world-workflow";
+    projection.workflow.exact_package_version = version;
     projection.workflow.workflow_id = "hello-world-workflow";
     const canonical = Buffer.from(canonicalJsonBytes(projection)).toString("utf8");
     const fact: DeliveryBoundOwnerFact = {
@@ -263,6 +264,7 @@ describe("M03 production owner-fact mapper", () => {
     };
 
     const binding = createTaskBindingObservationFact(fact);
+    expect(new DeliveryObservationMapper({serviceName:'execution',serviceVersion:'0.1.0'}).map(binding!)).toMatchObject({ok:true});
 
     expect(binding).toMatchObject({
       owner: "M01",

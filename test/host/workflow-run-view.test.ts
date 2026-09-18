@@ -1,0 +1,6 @@
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {it,expect} from 'vitest';
+import {WorkflowRunViewStore,type WorkflowRunView} from '../../src/host/workflow-run-view.js';
+it('keeps precise owner run identity across restart and excludes other Tasks and changed bytes',async()=>{const root=await mkdtemp(path.join(tmpdir(),'run-view-'));try{const value={schema:'execution.workflow-run-view@1',taskId:'task',deliveryId:'delivery',workflowRunId:'run',workflowId:'workflow',bindingIdentity:'binding',updatedAt:'now',currentTarget:'node',status:'running',visits:[{id:'visit-1',target:'node',enteredAt:'now'}],control:{}} as WorkflowRunView;await new WorkflowRunViewStore(root).put(value);expect(await new WorkflowRunViewStore(root).read({taskId:'task',deliveryId:'delivery'})).toEqual({state:'available',value});expect(await new WorkflowRunViewStore(root).read({taskId:'other',deliveryId:'delivery'})).toMatchObject({state:'unavailable'});await writeFile(path.join(root,'workflow-run.json'),'{}');expect(await new WorkflowRunViewStore(root).read({taskId:'task',deliveryId:'delivery'})).toMatchObject({state:'unavailable'});}finally{await rm(root,{recursive:true,force:true});}});

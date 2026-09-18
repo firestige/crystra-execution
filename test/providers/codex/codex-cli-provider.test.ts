@@ -379,3 +379,10 @@ describe("Codex CLI Agent Provider", () => {
     expect((await readFile(right.killed, "utf8")).trim()).not.toBe("");
   }, 15_000);
 });
+
+it("queries the exact native Codex catalog before any Delivery exists", async () => {
+ const f = await fixture("success", {models:["model-one","model-two"]});
+ const factory = new CodexCliProviderRealmFactory(f.configuration);
+ expect(await factory.listModels()).toEqual([{provider:"openai",model:"model-one"},{provider:"openai",model:"model-two"}]);
+ await expect(readFile(f.capture,"utf8")).rejects.toMatchObject({code:"ENOENT"});
+});

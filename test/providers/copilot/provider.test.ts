@@ -307,3 +307,10 @@ describe("Copilot SDK Agent Provider", () => {
     await prepared.lease.dispose();
   });
 });
+
+it("lists authenticated Copilot models without opening a Session or Delivery", async () => {
+ const client = new FakeClient();
+ const factory = createCopilotAgentProviderFactory({resolveRuntime:async()=>runtime(client)});
+ expect(await factory.listModels!()).toEqual([{provider:"github-copilot",model:"gpt-5.3-codex"}]);
+ expect(client.createSession).not.toHaveBeenCalled(); expect(client.stop).toHaveBeenCalled();
+});
