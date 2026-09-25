@@ -42,6 +42,7 @@ export interface DeliveryRuntimeFactory {
 }
 
 export interface DeliveryLifecycleOptions {
+  readonly tasks?: { select(id: string, displayName: string | undefined, reuse: boolean): Promise<string> };
   readonly resolver: Pick<WorkflowPackageResolver, "resolve">;
   readonly manifests: DeliveryManifestRepository;
   readonly snapshotRoot: string;
@@ -247,9 +248,13 @@ export class DeliveryLifecycleService {
     const taskId = ready.command.taskSelection.mode === "REUSE_TASK"
       ? ready.command.taskSelection.taskId
       : `task-${deliveryId}`;
-    const taskDisplayName = ready.command.taskSelection.mode === "NEW_TASK"
+    let taskDisplayName = ready.command.taskSelection.mode === "NEW_TASK"
       ? ready.command.taskSelection.displayName
       : undefined;
+    if (this.#options.tasks) {
+      try { taskDisplayName = await this.#options.tasks.select(taskId, taskDisplayName, ready.command.taskSelection.mode === "REUSE_TASK"); }
+      catch { await ready.holder.release(); return failure("DELIVERY_BINDING_FAILED"); }
+    }
     let snapshot;
     try {
       snapshot = await captureTaskPromptSnapshot({

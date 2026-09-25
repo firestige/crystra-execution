@@ -13,6 +13,8 @@ import {
   ProductionHostOperationRegistryError,
   createProductionHostOperationHandlers,
   getExecutionApplicationControl,
+  getExecutionTaskQuery,
+  openExecutionTaskQuery,
   getExecutionControlPlaneProjection,
   type ExecutionBootstrapDependencies,
   type AgentProviderDeliveryRealmRequest,
@@ -758,6 +760,9 @@ describe("Wave 6 production bootstrap", () => {
     void parallel.catch(() => undefined);
 
     const restarted = await new DefaultExecutionApplicationFactory({ agentProviderFactories: [implementationProvider({ next: () => ++requestCount })] }).create(configFile, dependencies);
+    const coldTasks = await getExecutionTaskQuery(restarted).snapshot();
+    expect(coldTasks.items.some(task => task.id === resultRequest.taskId && task.deliveryIds.includes(resultRequest.deliveryId))).toBe(true);
+    expect(await (await openExecutionTaskQuery(configFile)).snapshot()).toEqual(coldTasks);
     const restartedControl = getExecutionApplicationControl(restarted);
     await expect(restartedControl.readWorkflowRun(resultRequest)).resolves.toEqual(runProjection);
     await expect(restartedControl.readBusinessResult(resultRequest)).resolves.toMatchObject({state:"available"});

@@ -279,6 +279,14 @@ export class DeliveryManifestRepositoryV2 {
     this.#root = resolve(root);
   }
 
+  async list(): Promise<readonly DeliveryManifestV2[]> {
+    const { readdir } = await import("node:fs/promises");
+    let entries: string[];
+    try { entries = await readdir(this.#root); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
+    return Promise.all(entries.filter(name => name.endsWith(".json")).sort().map(name => this.load(join(this.#root, name))));
+  }
+
   async persist(manifest: DeliveryManifestV2): Promise<PersistedDeliveryManifestV2> {
     const path = join(this.#root, `${safeSegment(manifest.deliveryId)}.json`);
     try {
