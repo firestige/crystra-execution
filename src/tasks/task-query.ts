@@ -1,3 +1,8 @@
+import {
+  TaskPresentationRepository,
+  type TaskPresentation,
+  type UpdateTaskPresentation,
+} from "./task-presentation.js";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, open, link, unlink } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
@@ -7,7 +12,7 @@ export interface TaskHeader {
   readonly title: string;
   readonly createdAt: number;
 }
-export interface TaskSummary {
+export interface TaskSummary extends Partial<TaskPresentation> {
   readonly id: string;
   readonly title: string;
   readonly createdAt?: number;
@@ -74,15 +79,22 @@ export class TaskRepository {
   /** Retry-safe owner command. The caller supplies a stable admission identity. */
   async admit(header: TaskHeader): Promise<TaskHeader> {
     validate(header);
-    try { await this.create(header); }
-    catch (error) {
+    try {
+      await this.create(header);
+    } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const existing = (await this.list()).find(item => item.id === header.id);
-      if (!existing || existing.title !== header.title || existing.createdAt !== header.createdAt)
+      const existing = (await this.list()).find(
+        (item) => item.id === header.id,
+      );
+      if (
+        !existing ||
+        existing.title !== header.title ||
+        existing.createdAt !== header.createdAt
+      )
         throw new Error("TASK_ADMISSION_CONFLICT");
       return existing;
     }
-    return Object.freeze({...header});
+    return Object.freeze({ ...header });
   }
   async list(): Promise<readonly TaskHeader[]> {
     let entries: string[];
@@ -125,6 +137,20 @@ export class TaskQuery {
     private readonly repository: TaskRepository,
     private readonly manifests: () => Promise<readonly TaskManifest[]>,
   ) {}
+  async updatePresentation(
+    input: UpdateTaskPresentation,
+  ): Promise<TaskPresentation> {
+    if (!(await this.snapshot()).items.some((t) => t.id === input?.taskId))
+      throw new Error("TASK_NOT_FOUND");
+    const repository = new TaskPresentationRepository(this.repository.root);
+    const result = repository.update(input);
+    try {
+      repository.collectAssets();
+    } catch {
+      /* A committed update remains successful; next mutation retries cleanup. */
+    }
+    return result;
+  }
   async snapshot(): Promise<TaskSnapshot> {
     const [headers, manifests] = await Promise.all([
       this.repository.list(),
@@ -167,6 +193,9 @@ export class TaskQuery {
       if (!task.deliveryIds.includes(manifest.deliveryId))
         task.deliveryIds.push(manifest.deliveryId);
     }
+    const presentation = new TaskPresentationRepository(
+      this.repository.root,
+    ).list();
     const items = Object.freeze(
       [...tasks.values()]
         .sort(
@@ -176,6 +205,10 @@ export class TaskQuery {
         .map((t) =>
           Object.freeze({
             ...t,
+            ...(presentation.get(t.id) ?? {}),
+            ...(presentation.get(t.id)?.displayTitle
+              ? { title: presentation.get(t.id)!.displayTitle! }
+              : {}),
             deliveryIds: Object.freeze(t.deliveryIds.sort()),
           }),
         ),
