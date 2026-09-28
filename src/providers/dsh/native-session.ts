@@ -178,6 +178,7 @@ function dispositionSetup(
 }
 
 class DshNativeProviderSession implements NativeProviderSession {
+  #cancelled = false;
   readonly opaqueIdentity: string;
 
   constructor(
@@ -190,6 +191,7 @@ class DshNativeProviderSession implements NativeProviderSession {
   }
 
   async run(input: unknown): Promise<readonly NativeTurnEvent[]> {
+    this.#cancelled = false;
     const firstSequence = this.handle.agent.session.seq;
     this.dispositions.splice(0);
     this.handle.agent.followup(this.closure.createUserMessage({
@@ -199,10 +201,21 @@ class DshNativeProviderSession implements NativeProviderSession {
     await this.handle.agent.whenIdle();
     const output: NativeTurnEvent[] = [];
     for (const event of this.handle.agent.session.events) {
-      if (event.seq < firstSequence || event.type !== "assistant/message") continue;
+      if (event.seq < firstSequence) continue;
+      if (event.type === "turn/end") {
+        const reason = event.data?.reason as { kind?: string } | undefined;
+        if (reason?.kind === "error" || reason?.kind === "aborted") {
+          output.push({ kind: "provider-failed", code: reason.kind === "aborted" ? "PROVIDER_CANCELLED" : "PROVIDER_PROTOCOL_ERROR", detail: "DSH turn did not complete successfully" });
+        }
+      }
+      if (event.type !== "assistant/message") continue;
       const message = event.data?.message as { content?: unknown } | undefined;
       if (message?.content !== undefined) output.push({ kind: "output", content: message.content as never });
     }
+    if (this.#cancelled && !output.some((event) => event.kind === "provider-failed")) {
+      output.push({ kind: "provider-failed", code: "PROVIDER_CANCELLED", detail: "DSH turn was cancelled" });
+    }
+    if (output.some((event) => event.kind === "provider-failed")) return output;
     output.push(...this.dispositions);
     if (this.dispositions.length === 0) output.push({ kind: "turn-ended" });
     return output;
@@ -213,6 +226,7 @@ class DshNativeProviderSession implements NativeProviderSession {
   }
 
   async cancel(): Promise<void> {
+    this.#cancelled = true;
     this.handle.agent.cancel({ kind: "user" });
     await this.handle.agent.whenIdle();
   }

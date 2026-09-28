@@ -3,3 +3,4 @@ export * from "./delivery-realm.js";
 export * from "./native-session.js";
 export * from "./operation-authority.js";
 export * from "./public-closure.js";
+export * from "./agent-provider.js";
