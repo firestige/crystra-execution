@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import { CodexCliProviderRealmFactory } from "../providers/codex/index.js";
+import { createDshAgentProviderFactory } from "../providers/dsh/agent-provider.js";
 import { createCopilotAgentProviderFactory } from "../providers/copilot/index.js";
 export {
   AgentProviderFactoryRegistry,
@@ -18,6 +19,7 @@ export function createDefaultProductionAgentProviderFactories(config: Readonly<{
   shutdownTimeoutMs: number;
 }>): readonly AgentProviderRealmFactory[] {
   return Object.freeze([
+    createDshAgentProviderFactory({ stateDirectory: path.join(config.stateRoot, "providers", "dsh"), turnTimeoutMs: config.executionTimeoutMs }),
     createCopilotAgentProviderFactory({ turnTimeoutMs: config.executionTimeoutMs }),
     new CodexCliProviderRealmFactory({
       executablePath: createRequire(import.meta.url).resolve("@openai/codex/bin/codex.js"),

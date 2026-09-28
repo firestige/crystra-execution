@@ -91,7 +91,7 @@ For host-neutral embedding, import `ExecutionApplicationFactory`, `DefaultExecut
 
 ## Multi-Provider 2.0
 
-`execution.config@2.0.0` is the production multi-Provider path and contains no installation-wide Provider or model default. `DefaultExecutionApplicationFactory` registers the exact bundled Copilot SDK and Codex CLI Provider factories unless an embedding supplies an explicit registry. Each Agent-action Role must be present in `<canonical-worktree>/.crystra/role-provider-bindings.json` with an exact Provider identity/version and Provider-owned model coordinate. Admission validates required Workflow capabilities, freezes the factory descriptor digest into `execution.delivery-manifest@2.0.0`, and never performs priority selection or fallback. Recovery accepts only the same descriptor and starts realms only for Providers actually used by the persisted Delivery. See `config/schema/execution.config.v2.schema.json`.
+`execution.config@2.0.0` is the production multi-Provider path and contains no installation-wide Provider or model default. `DefaultExecutionApplicationFactory` registers the exact bundled DSH, Copilot SDK and Codex CLI Provider factories unless an embedding supplies an explicit registry. Each Agent-action Role must be present in `<canonical-worktree>/.crystra/role-provider-bindings.json` with an exact Provider identity/version and Provider-owned model coordinate. Admission validates required Workflow capabilities, freezes the factory descriptor digest into `execution.delivery-manifest@2.0.0`, and never performs priority selection or fallback. Recovery accepts only the same descriptor and starts realms only for Providers actually used by the persisted Delivery. See `config/schema/execution.config.v2.schema.json`.
 
 The default Copilot factory registers `provider.copilot@1.0.78` and reuses the local logged-in user through the exact bundled SDK. The default Codex factory registers `provider.codex@0.144.5` and reuses Codex CLI's local login state. Neither path asks the embedding host for token material. Every Delivery realm admits only model coordinates frozen for its Roles and fails closed on runtime, login, model, recovery, or binding drift.
 
@@ -124,3 +124,29 @@ git clone https://github.com/firestige/crystra-execution.git
 Exact Workflow Package resolution can consume one qualified aggregate Crystra Workflow RC when no package-scoped release exists. It verifies the candidate receipt, metadata digest, all four asset digests, and source/contract bindings before admitting the archive. Multiple matching candidates fail closed; a package-scoped release takes precedence. This enables RC combination qualification without publishing GA.
 
 The `latest` selector continues to exclude aggregate RCs; request an exact `name@version` for candidate integration.
+
+### DSH Agent Provider
+
+The default production registry includes `provider.dsh@0.1.1-rc.2` (`dsh-headless`), with structured completion and Action interaction. It runs the pinned DSH headless runtime inside an isolated Delivery realm; it does not attach to a running DSH UI session or load its ambient plugins. The optional `@deepseek-ai/dsh@0.1.1-rc.2` peer must be installed when using this Provider; other Providers do not start or load DSH.
+
+Set each applicable Role in `.crystra/role-provider-bindings.json` (replace `role.reviewer` with the actual Workflow Role):
+
+```json
+{
+  "schemaVersion": "execution.repository-role-provider-bindings@1.0.0",
+  "bindings": {
+    "role.reviewer": {
+      "agentProvider": { "identity": "provider.dsh", "version": "0.1.1-rc.2" },
+      "model": { "provider": "deepseek", "model": "deepseek-chat" }
+    }
+  }
+}
+```
+
+Authentication stays inside the Provider. It reads `DEEPSEEK_API_KEY` from the process environment first, then the same reference in `$DSH_HOME/.credentials.yaml` (default `~/.dsh/.credentials.yaml`, DSH `version: 1` / `refs` format). Missing credentials fail when opening a session. It does not copy keys into bindings, manifests, or recovery records. Existing strict file-only legacy adapters retain their previous behavior.
+
+`DEEPSEEK_BASE_URL` selects a local/proxy OpenAI-compatible DeepSeek endpoint; the default is `https://api.deepseek.com`. A local endpoint must accept DSH's DeepSeek chat/tool-call protocol and the explicit model coordinate. `deepseek` and `deepseek-official` are supported model-provider coordinates. Model availability is determined by that endpoint during execution; this mainline registry has no model-discovery API. DSH profile patch settings and `.env` files are not automatically imported.
+
+Embeddings can instead register `createDshAgentProviderFactory({ stateDirectory, credentialPath, credentialRef, baseURL, turnTimeoutMs })` from `crystra-execution`. Only `stateDirectory` is required. Connection settings select transport/authentication, never a fallback model. The production factory uses `executionTimeoutMs` as the turn deadline.
+
+Session persistence is isolated by Delivery, manifest and canonical worktree. Restoring requires the persisted opaque identity and matching session/Role/model/connection binding. Cancellation, timeout and provider errors become explicit failed dispositions; a timed-out session cannot run again. The Provider disposes its sessions and runtime with the Delivery realm.

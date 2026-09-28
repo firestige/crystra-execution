@@ -91,7 +91,7 @@ Crystra 候选仍在准备中，尚无可安装的 Crystra 发布。`packages/ds
 
 ## 多 Provider 2.0
 
-`execution.config@2.0.0` 是正式的多 Provider production path，不含 installation-wide Provider 或 model default。除非 embedding 显式传入 registry，`DefaultExecutionApplicationFactory` 会注册精确锁定的 Copilot SDK 与 Codex CLI Provider factory。每个 Agent-action Role 必须在 `<canonical-worktree>/.crystra/role-provider-bindings.json` 中显式绑定 exact Provider identity/version 与 Provider-owned model coordinate。Admission 校验 Workflow required capabilities，把 factory descriptor digest 冻结进 `execution.delivery-manifest@2.0.0`，且从不做 priority selection 或 fallback。Recovery 只接受同一 descriptor，并且只为 persisted Delivery 实际使用的 Provider 启动 realm。Machine schema 见 `config/schema/execution.config.v2.schema.json`。
+`execution.config@2.0.0` 是正式的多 Provider production path，不含 installation-wide Provider 或 model default。除非 embedding 显式传入 registry，`DefaultExecutionApplicationFactory` 会注册精确锁定的 DSH、Copilot SDK 与 Codex CLI Provider factory。每个 Agent-action Role 必须在 `<canonical-worktree>/.crystra/role-provider-bindings.json` 中显式绑定 exact Provider identity/version 与 Provider-owned model coordinate。Admission 校验 Workflow required capabilities，把 factory descriptor digest 冻结进 `execution.delivery-manifest@2.0.0`，且从不做 priority selection 或 fallback。Recovery 只接受同一 descriptor，并且只为 persisted Delivery 实际使用的 Provider 启动 realm。Machine schema 见 `config/schema/execution.config.v2.schema.json`。
 
 默认 Copilot factory 注册 `provider.copilot@1.0.78`，通过精确锁定的 SDK 复用本机登录；默认 Codex factory 注册 `provider.codex@0.144.5`，复用 Codex CLI 的本机登录状态。两条路径都不会向 embedding host 索取 token material。每个 Delivery realm 只接纳已为 Role 冻结的 model coordinate；runtime、登录、model、恢复或 binding 发生漂移时一律 fail closed。
 
@@ -120,3 +120,29 @@ git clone https://github.com/firestige/crystra-execution.git
 ## License
 
 [Apache-2.0](LICENSE)
+
+### DSH Agent Provider
+
+默认 production registry 新增 `provider.dsh@0.1.1-rc.2`（`dsh-headless`），支持 structured completion 和 Action interaction。它在独立的 Delivery realm 中运行锁定版本的 DSH headless runtime，不附着到已有 DSH UI 会话，也不加载宿主的环境插件。使用时需安装可选 peer `@deepseek-ai/dsh@0.1.1-rc.2`；其他 Provider 不会因此启动或加载 DSH。
+
+在 `.crystra/role-provider-bindings.json` 中显式绑定对应 Role（将 `role.reviewer` 替换为 Workflow 的实际 Role）：
+
+```json
+{
+  "schemaVersion": "execution.repository-role-provider-bindings@1.0.0",
+  "bindings": {
+    "role.reviewer": {
+      "agentProvider": { "identity": "provider.dsh", "version": "0.1.1-rc.2" },
+      "model": { "provider": "deepseek", "model": "deepseek-chat" }
+    }
+  }
+}
+```
+
+凭证由 Provider 内部读取：优先使用进程环境中的 `DEEPSEEK_API_KEY`，其次读取 `$DSH_HOME/.credentials.yaml` 中的同名引用（默认 `~/.dsh/.credentials.yaml`，DSH `version: 1` / `refs` 格式）。凭证缺失时，会话打开失败。密钥不写入 Role binding、Manifest 或恢复记录；旧版严格指定文件的适配器维持原有行为。
+
+`DEEPSEEK_BASE_URL` 可指向本机或代理的 OpenAI 兼容 DeepSeek 接口，默认 `https://api.deepseek.com`。本机接口必须支持 DSH 的 DeepSeek chat/tool-call 协议和所绑定的模型。model-provider coordinate 支持 `deepseek` 和 `deepseek-official`。模型是否可用由接口在执行时确认；本次基于的主线 registry 尚无模型发现 API。不会自动导入 DSH profile patch 配置或 `.env` 文件。
+
+Embedding 可从 `crystra-execution` 导入并注册 `createDshAgentProviderFactory({ stateDirectory, credentialPath, credentialRef, baseURL, turnTimeoutMs })`，仅 `stateDirectory` 必填。这些参数控制连接与认证，不提供模型 fallback。默认 production factory 使用 `executionTimeoutMs` 作为回合超时。
+
+会话按 Delivery、Manifest 与 canonical worktree 隔离持久化；恢复要求 opaque identity 及 session/Role/model/连接绑定一致。取消、超时和接口错误会返回明确的失败状态，超时会话不能再次执行。Delivery realm 释放时会清理其会话和 runtime。
