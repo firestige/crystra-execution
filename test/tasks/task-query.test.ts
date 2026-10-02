@@ -76,3 +76,20 @@ it('admits once across concurrent retries and rejects identity reuse with differ
  expect(await store.list()).toEqual([header]);
  await expect(store.admit({...header,title:'Different task'})).rejects.toThrow('TASK_ADMISSION_CONFLICT');
 });
+
+it("distinguishes a never-created Task store from an unreadable store", async () => {
+  const { writeFile } = await import("node:fs/promises");
+  const store = await repository();
+  expect(await new TaskRepository(join(store.root, "absent")).list()).toEqual([]);
+  const file = join(store.root, "not-a-directory");
+  await writeFile(file, "not a Task store");
+  await expect(new TaskRepository(file).list()).rejects.toMatchObject({ code: "ENOTDIR" });
+});
+
+it("rejects invalid admission facts and misnamed durable Task records", async () => {
+  const { writeFile } = await import("node:fs/promises");
+  const store = await repository();
+  await expect(store.admit({ id: "t", title: "", createdAt: 0 })).rejects.toThrow("TASK_RECORD_INVALID");
+  await writeFile(join(store.root, "wrong-identity.json"), JSON.stringify({ schemaVersion: "execution.task@1.0.0", id: "t", title: "Title", createdAt: 1 }));
+  await expect(new TaskQuery(store, async () => []).snapshot()).rejects.toThrow("TASK_RECORD_INVALID");
+});

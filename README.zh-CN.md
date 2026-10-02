@@ -164,7 +164,7 @@ git clone https://github.com/firestige/crystra-execution.git
 
 凭证由 Provider 内部读取：优先使用进程环境中的 `DEEPSEEK_API_KEY`，其次读取 `$DSH_HOME/.credentials.yaml` 中的同名引用（默认 `~/.dsh/.credentials.yaml`，DSH `version: 1` / `refs` 格式）。凭证缺失时，会话打开失败。密钥不写入 Role binding、Manifest 或恢复记录；旧版严格指定文件的适配器维持原有行为。
 
-`DEEPSEEK_BASE_URL` 可指向本机或代理的 OpenAI 兼容 DeepSeek 接口，默认 `https://api.deepseek.com`。本机接口必须支持 DSH 的 DeepSeek chat/tool-call 协议和所绑定的模型。model-provider coordinate 支持 `deepseek` 和 `deepseek-official`。模型是否可用由接口在执行时确认；本次基于的主线 registry 尚无模型发现 API。不会自动导入 DSH profile patch 配置或 `.env` 文件。
+`DEEPSEEK_BASE_URL` 可指向本机或代理的 OpenAI 兼容 DeepSeek 接口，默认 `https://api.deepseek.com`。本机接口必须支持 DSH 的 DeepSeek chat/tool-call 协议和所绑定的模型。model-provider coordinate 支持 `deepseek` 和 `deepseek-official`。模型是否可用由接口在执行时确认；DSH 尚未实现可选的模型发现接口。不会自动导入 DSH profile patch 配置或 `.env` 文件。
 
 Embedding 可从 `crystra-execution` 导入并注册 `createDshAgentProviderFactory({ stateDirectory, credentialPath, credentialRef, baseURL, turnTimeoutMs })`，仅 `stateDirectory` 必填。这些参数控制连接与认证，不提供模型 fallback。默认 production factory 使用 `executionTimeoutMs` 作为回合超时。
 
