@@ -8,6 +8,7 @@ import type {
   AgentProviderRealmFactory, AgentProviderSessionOpenRequest,
   AgentProviderDeliveryRealmRequest, NativeProviderSession, NativeTurnEvent,
 } from "../provider.js";
+import { queryDshModels } from "./model-catalog.js";
 import { DSH_RUNTIME_VERSION } from "./public-closure.js";
 import { DshProviderAdapterFactory } from "./adapter-factory.js";
 
@@ -21,6 +22,7 @@ export interface DshAgentProviderFactoryOptions {
   readonly credentialRef?: string;
   readonly baseURL?: string;
   readonly turnTimeoutMs?: number;
+  readonly modelQueryTimeoutMs?: number;
 }
 
 const hash = (value: unknown): string => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -30,8 +32,10 @@ export function createDshAgentProviderFactory(options: DshAgentProviderFactoryOp
   const credentialPath = options.credentialPath ?? join(process.env.DSH_HOME ?? join(homedir(), ".dsh"), ".credentials.yaml");
   const credentialRef = options.credentialRef ?? "DEEPSEEK_API_KEY";
   const baseURL = options.baseURL ?? process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
+  const modelQueryTimeoutMs = options.modelQueryTimeoutMs ?? 10_000;
   const turnTimeoutMs = options.turnTimeoutMs ?? 7_200_000;
   if (!isAbsolute(stateDirectory) || !isAbsolute(credentialPath) || !/^[A-Za-z_][A-Za-z0-9_]*$/u.test(credentialRef)
+    || !Number.isSafeInteger(modelQueryTimeoutMs) || modelQueryTimeoutMs < 1 || modelQueryTimeoutMs > 2_147_483_647
     || !Number.isSafeInteger(turnTimeoutMs) || turnTimeoutMs < 1 || turnTimeoutMs > 2_147_483_647
     || !["http:", "https:"].includes(new URL(baseURL).protocol)) throw new TypeError("DSH Provider configuration is invalid");
   const descriptor = Object.freeze({
@@ -39,7 +43,9 @@ export function createDshAgentProviderFactory(options: DshAgentProviderFactoryOp
     identity: DSH_PROVIDER_IDENTITY, version: DSH_RUNTIME_VERSION, adapterKey: "dsh-headless" as const,
     capabilities: Object.freeze(["action-interaction", "structured-completion"]),
   });
-  return Object.freeze({ descriptor, async acquire(request: AgentProviderDeliveryRealmRequest) {
+  return Object.freeze({ descriptor,
+    listModels: () => queryDshModels({ baseURL, credentialPath, credentialRef, timeoutMs: modelQueryTimeoutMs }),
+    async acquire(request: AgentProviderDeliveryRealmRequest) {
     if (request.schemaVersion !== "execution.agent-provider-delivery-realm-request@2.0.0"
       || request.providerIdentity !== descriptor.identity || request.providerVersion !== descriptor.version
       || request.providerDescriptorDigest !== canonicalDigest(descriptor)

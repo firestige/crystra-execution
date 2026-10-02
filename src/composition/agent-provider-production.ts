@@ -20,7 +20,7 @@ export function createDefaultProductionAgentProviderFactories(config: Readonly<{
   shutdownTimeoutMs: number;
 }>): readonly AgentProviderRealmFactory[] {
   return Object.freeze([
-    createDshAgentProviderFactory({ stateDirectory: path.join(config.stateRoot, "providers", "dsh"), turnTimeoutMs: config.executionTimeoutMs }),
+    createDshAgentProviderFactory({ stateDirectory: path.join(config.stateRoot, "providers", "dsh"), turnTimeoutMs: config.executionTimeoutMs, modelQueryTimeoutMs: config.startupTimeoutMs }),
     createCopilotAgentProviderFactory({ turnTimeoutMs: config.executionTimeoutMs }),
     new CodexCliProviderRealmFactory({
       executablePath: createRequire(import.meta.url).resolve("@openai/codex/bin/codex.js"),

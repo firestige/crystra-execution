@@ -63,6 +63,7 @@ describe("DSH production Agent Provider", () => {
     { stateDirectory: "/tmp/dsh", credentialRef: "BAD KEY" },
     { stateDirectory: "/tmp/dsh", baseURL: "file:///tmp/key" },
     { stateDirectory: "/tmp/dsh", turnTimeoutMs: 0 },
+    { stateDirectory: "/tmp/dsh", modelQueryTimeoutMs: 0 },
   ])("rejects invalid local settings: %j", (options) => {
     expect(() => createDshAgentProviderFactory(options)).toThrow();
   });

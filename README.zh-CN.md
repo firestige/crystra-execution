@@ -168,7 +168,7 @@ rc.2 的迁移与验收范围见[运行时迁移说明](docs/dsh-015-runtime-mig
 
 开发锁文件同时将 DSH 组件依赖固定到 rc.2，避免上游 CLI 的版本范围自动引入后续 RC。适配器使用公开的 `Session.ownEvents()` 接口。已存在的 Delivery 保留原 provider 描述符，不能自动换成新版恢复；这类 Delivery 应使用原版本运行时，或更新绑定后准入新的 Delivery。
 
-`DEEPSEEK_BASE_URL` 可指向本机或代理的 OpenAI 兼容 DeepSeek 接口，默认 `https://api.deepseek.com`。本机接口必须支持 DSH 的 DeepSeek chat/tool-call 协议和所绑定的模型。model-provider coordinate 支持 `deepseek` 和 `deepseek-official`。模型是否可用由接口在执行时确认；DSH 尚未实现可选的模型发现接口。不会自动导入 DSH profile patch 配置或 `.env` 文件。
+`DEEPSEEK_BASE_URL` 可指向本机或代理的 OpenAI 兼容 DeepSeek 接口，默认 `https://api.deepseek.com`。本机接口必须支持 DSH 的 DeepSeek chat/tool-call 协议和所绑定的模型。model-provider coordinate 支持 `deepseek` 和 `deepseek-official`。规划时通过同一服务的 `GET /models` 查询真实模型 ID，返回 `deepseek` 模型坐标。空目录保持为空；缺少凭证、请求失败、无效响应或超时会报告 `unavailable`，不填入默认模型。发现请求有大小和时间限制，不创建 Delivery、Session 或状态目录；`modelQueryTimeoutMs` 默认 10 秒，生产组合使用 `startupTimeoutMs`。不会自动导入 DSH profile patch 配置或 `.env` 文件。
 
 Embedding 可从 `crystra-execution` 导入并注册 `createDshAgentProviderFactory({ stateDirectory, credentialPath, credentialRef, baseURL, turnTimeoutMs })`，仅 `stateDirectory` 必填。这些参数控制连接与认证，不提供模型 fallback。默认 production factory 使用 `executionTimeoutMs` 作为回合超时。
 
