@@ -153,7 +153,7 @@ describe("M03 production owner-fact mapper", () => {
         role_prompt_identity: "role.prompt.facilitator",
         role_prompt_digest: `sha256:${"1".repeat(64)}`,
         agent_provider_id: "provider.dsh",
-        agent_provider_version: "0.1.1-rc.2",
+        agent_provider_version: "0.1.5-rc.2",
         agent_provider_adapter_key: "dsh-headless",
         agent_provider_descriptor_digest: `sha256:${"2".repeat(64)}`,
         required_capabilities: ["action-interaction", "structured-completion"],

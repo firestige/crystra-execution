@@ -174,7 +174,7 @@ function implementationProvider(requestInput: Readonly<{ next(): number }>): Age
     descriptor: Object.freeze({
       schemaVersion: "execution.agent-provider-factory@1.0.0" as const,
       identity: "provider.dsh",
-      version: "0.1.1-rc.2",
+      version: "0.1.5-rc.2",
       adapterKey: "dsh-headless" as const,
       capabilities: Object.freeze(["action-interaction", "structured-completion"]),
     }),
@@ -192,7 +192,7 @@ function implementationProvider(requestInput: Readonly<{ next(): number }>): Age
       return Object.freeze({
         schemaVersion: "execution.agent-provider-delivery-realm-lease@2.0.0" as const,
         providerIdentity: "provider.dsh",
-        providerVersion: "0.1.1-rc.2",
+        providerVersion: "0.1.5-rc.2",
         descriptorDigest: request.providerDescriptorDigest,
         deliveryId: request.deliveryId,
         manifestBindingIdentity: request.manifestBindingIdentity,
@@ -218,7 +218,7 @@ async function writeImplementationRoleBindings(worktree: string): Promise<void> 
   await writeFile(path.join(worktree, ".crystra/role-provider-bindings.json"), `${JSON.stringify({
     schemaVersion: "execution.repository-role-provider-bindings@1.0.0",
     bindings: Object.fromEntries(roles.roles.map(({ id }) => [id, {
-      agentProvider: { identity: "provider.dsh", version: "0.1.1-rc.2" },
+      agentProvider: { identity: "provider.dsh", version: "0.1.5-rc.2" },
       model: { provider: "deepseek", model: "fixture-model" },
     }])),
   })}\n`);

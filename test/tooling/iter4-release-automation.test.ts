@@ -286,7 +286,7 @@ describe("Iteration 4 release automation", () => {
     expect(() => assertReleaseNotes(notes, "{{version}}")).not.toThrow();
 
     const rendered = renderReleaseNotes("0.1.3", {
-      node: ">=24.12.0 <25", dsh: "0.1.1-rc.2",
+      node: ">=24.12.0 <25", dsh: "0.1.5-rc.2",
       workflowContract: "agentops.workflow-dsl@2.0.0", observationContract: "agentops.observation@1.0.0",
     }, "# Changelog\n\n## [Unreleased] - 2026-08-26\n\n### Features\n\n- release automation\n\n## [0.1.2] - 2026-08-25\n");
     expect(rendered.notes).toContain("- release automation");
@@ -296,7 +296,7 @@ describe("Iteration 4 release automation", () => {
 
   it("renders post-RC notes from the current version's latest prerelease section", () => {
     const rendered = renderReleaseNotes("0.1.4", {
-      node: ">=24.12.0 <25", dsh: "0.1.1-rc.2",
+      node: ">=24.12.0 <25", dsh: "0.1.5-rc.2",
       workflowContract: "agentops.workflow-dsl@2.0.0", observationContract: "agentops.observation@1.0.0",
     }, [
       "# Changelog",
@@ -319,7 +319,7 @@ describe("Iteration 4 release automation", () => {
 
   it("rejects an old prerelease when the current package version section is absent", () => {
     expect(() => renderReleaseNotes("0.1.4", {
-      node: ">=24.12.0 <25", dsh: "0.1.1-rc.2",
+      node: ">=24.12.0 <25", dsh: "0.1.5-rc.2",
       workflowContract: "agentops.workflow-dsl@2.0.0", observationContract: "agentops.observation@1.0.0",
     }, "# Changelog\n\n## [0.1.3-rc.1] - 2026-08-26\n\n- old candidate\n"))
       .toThrowError("CHANGELOG_CURRENT_PRERELEASE_SECTION_MISSING");
@@ -327,7 +327,7 @@ describe("Iteration 4 release automation", () => {
 
   it("rejects a stale matching prerelease below a newer changelog section", () => {
     expect(() => renderReleaseNotes("0.1.4", {
-      node: ">=24.12.0 <25", dsh: "0.1.1-rc.2",
+      node: ">=24.12.0 <25", dsh: "0.1.5-rc.2",
       workflowContract: "agentops.workflow-dsl@2.0.0", observationContract: "agentops.observation@1.0.0",
     }, [
       "# Changelog",

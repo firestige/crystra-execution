@@ -18,13 +18,13 @@ function digest(value: string): string {
 async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), "execution-release-verifier-"));
   await writeFile(path.join(root, names.core), "core");
-  const notes = "# Crystra Execution 0.1.0\n\n## What's new\n\n- fixture\n\n## Compatibility\n\n- `node`: `>=24.12.0 <25`\n- `dsh`: `0.1.1-rc.2`\n- `workflowContract`: `agentops.workflow-dsl@2.0.0`\n- `observationContract`: `agentops.observation@1.0.0`\n\n## Upgrade guide\n\nInstall both packages at `0.1.0`.\n";
+  const notes = "# Crystra Execution 0.1.0\n\n## What's new\n\n- fixture\n\n## Compatibility\n\n- `node`: `>=24.12.0 <25`\n- `dsh`: `0.1.5-rc.2`\n- `workflowContract`: `agentops.workflow-dsl@2.0.0`\n- `observationContract`: `agentops.observation@1.0.0`\n\n## Upgrade guide\n\nInstall both packages at `0.1.0`.\n";
   await writeFile(path.join(root, "release-notes.md"), notes);
   const metadata = {
     schemaVersion: "execution.release@1.0.0",
     version: "0.1.0",
     compatibility: {
-      node: ">=24.12.0 <25", dsh: "0.1.1-rc.2",
+      node: ">=24.12.0 <25", dsh: "0.1.5-rc.2",
       workflowContract: "agentops.workflow-dsl@2.0.0", observationContract: "agentops.observation@1.0.0",
     },
     releaseNotes: {
@@ -51,7 +51,7 @@ describe("Iteration 3 release artifact verifier", () => {
     const manifest = JSON.parse(await readFile(path.resolve(import.meta.dirname, "../../package.json"), "utf8"));
     expect(manifest.dependencies?.["@deepseek-ai/dsh"]).toBeUndefined();
     expect(manifest.optionalDependencies?.["@deepseek-ai/dsh"]).toBeUndefined();
-    expect(manifest.peerDependencies?.["@deepseek-ai/dsh"]).toBe("0.1.1-rc.2");
+    expect(manifest.peerDependencies?.["@deepseek-ai/dsh"]).toBe("0.1.5-rc.2");
     expect(manifest.peerDependenciesMeta?.["@deepseek-ai/dsh"]).toEqual({ optional: true });
   });
 

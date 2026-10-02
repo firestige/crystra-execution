@@ -52,7 +52,7 @@ describe("repository Role-to-Provider/model bindings", () => {
           model: { provider: "openai", model: "gpt-5.3-codex" },
         },
         "role.architecture-reviewer": {
-          agentProvider: { identity: "provider.dsh", version: "0.1.1-rc.2" },
+          agentProvider: { identity: "provider.dsh", version: "0.1.5-rc.2" },
           model: { provider: "deepseek-official", model: "deepseek-reasoner" },
         },
       },

@@ -49,7 +49,7 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
     await writeFile(path.join(workspace, ".crystra/role-provider-bindings.json"), `${JSON.stringify({
       schemaVersion: "execution.repository-role-provider-bindings@1.0.0",
       bindings: Object.fromEntries(declaredRoles.roles.map(({ id }) => [id, {
-        agentProvider: { identity: "provider.dsh", version: "0.1.1-rc.2" },
+        agentProvider: { identity: "provider.dsh", version: "0.1.5-rc.2" },
         model: { provider: "deepseek", model: "deepseek-chat" },
       }])),
     })}\n`, "utf8");
@@ -158,7 +158,7 @@ describe("Wave 4 production M01 to pinned M02 first-party walking skeleton", () 
       descriptor: Object.freeze({
         schemaVersion: "execution.agent-provider-factory@1.0.0",
         identity: "provider.dsh",
-        version: "0.1.1-rc.2",
+        version: "0.1.5-rc.2",
         adapterKey: "dsh-headless",
         capabilities: Object.freeze(["action-interaction", "structured-completion"]),
       }),

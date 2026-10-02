@@ -13,7 +13,7 @@ describe("DSH Delivery realm compatibility export", () => {
       descriptor: Object.freeze({
         schemaVersion: "execution.agent-provider-factory@1.0.0",
         identity: "provider.dsh",
-        version: "0.1.1-rc.2",
+        version: "0.1.5-rc.2",
         adapterKey: "dsh-headless",
         capabilities: Object.freeze(["action-interaction", "structured-completion"]),
       }),
@@ -23,7 +23,7 @@ describe("DSH Delivery realm compatibility export", () => {
 
     expect(DshExportedBroker).toBe(DeliveryAgentProviderRealmBroker);
     expect(new DshExportedBroker(registry).registry).toBe(registry);
-    expect(registry.admit({ identity: "provider.dsh", version: "0.1.1-rc.2" }, ["structured-completion"]))
+    expect(registry.admit({ identity: "provider.dsh", version: "0.1.5-rc.2" }, ["structured-completion"]))
       .toMatchObject({ adapterKey: "dsh-headless" });
   });
 });

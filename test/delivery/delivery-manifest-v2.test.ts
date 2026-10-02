@@ -28,7 +28,7 @@ function factory(identity: string, version: string, adapterKey: "dsh-headless" |
 }
 
 const registry = new AgentProviderFactoryRegistry([
-  factory("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
+  factory("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
   factory("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]),
 ]);
 
@@ -39,7 +39,7 @@ async function fixture(): Promise<CreateDeliveryManifestV2Input> {
     documentState: "PRESENT",
     documentDigest: sha("c"),
     bindings: Object.freeze({
-      "role.facilitator": Object.freeze({ agentProvider: Object.freeze({ identity: "provider.dsh", version: "0.1.1-rc.2" }), model: Object.freeze({ provider: "deepseek-official", model: "deepseek-chat" }) }),
+      "role.facilitator": Object.freeze({ agentProvider: Object.freeze({ identity: "provider.dsh", version: "0.1.5-rc.2" }), model: Object.freeze({ provider: "deepseek-official", model: "deepseek-chat" }) }),
       "role.reviewer": Object.freeze({ agentProvider: Object.freeze({ identity: "provider.codex", version: "0.144.5" }), model: Object.freeze({ provider: "openai", model: "gpt-5.3-codex" }) }),
     }),
   });
@@ -183,7 +183,7 @@ describe("Delivery Manifest 2.0", () => {
           role_prompt_identity: "role.prompt.facilitator",
           role_prompt_digest: sha("a"),
           agent_provider_id: "provider.dsh",
-          agent_provider_version: "0.1.1-rc.2",
+          agent_provider_version: "0.1.5-rc.2",
           agent_provider_adapter_key: "dsh-headless",
           agent_provider_descriptor_digest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
           required_capabilities: ["action-interaction", "structured-completion"],

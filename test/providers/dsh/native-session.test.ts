@@ -5,7 +5,11 @@ import { createDshNativeSessionFactory, DshCredentialLeaseBroker } from "../../.
 function nativeAgent(id: string) {
   return {
     id,
-    session: { seq: 0, events: [] as Array<{ seq: number; type: string; data?: Record<string, unknown> }> },
+    session: {
+      seq: 0,
+      log: [] as Array<{ seq: number; type: string; data?: Record<string, unknown> }>,
+      ownEvents() { return this.log; },
+    },
     followups: [] as unknown[],
     cancellations: [] as unknown[],
     followup(message: unknown) { this.followups.push(message); },
@@ -104,7 +108,7 @@ describe("DSH native session adapter", () => {
 
   it("forwards assistant frames but maps idle turn-end only to a non-completion event", async () => {
     const agent = nativeAgent("native-created");
-    agent.session.events.push(
+    agent.session.log.push(
       { seq: -1, type: "assistant/message", data: { message: { content: "old" } } },
       { seq: 0, type: "other" },
       { seq: 1, type: "assistant/message", data: {} },
