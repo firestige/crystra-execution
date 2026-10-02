@@ -116,7 +116,11 @@ export type WorkflowPackageSourceResult =
   | Readonly<{ kind: "UNAVAILABLE" }>
   | Readonly<{ kind: "DIGEST_MISMATCH" }>
   | Readonly<{ kind: "INVALID" }>;
-export interface WorkflowPackageSource { fetch(request: WorkflowPackageSourceRequest): Promise<WorkflowPackageSourceResult> }
+export interface WorkflowPackageSource {
+  readonly selectionPolicy?: "exact-private";
+  readonly cacheNamespace?: string;
+  fetch(request: WorkflowPackageSourceRequest): Promise<WorkflowPackageSourceResult>;
+}
 export interface WorkflowPackageSourceFactory { create(): Promise<WorkflowPackageSource> }
 export type SourceFactory = WorkflowPackageSourceFactory;
 export class SourceFactorySelectionError extends Error {

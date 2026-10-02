@@ -3,7 +3,7 @@ import { readFile, realpath, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { AttachmentContentPort, ClockPort, DeliveryBoundOwnerFact, DisabledObservationSink, IdPort, OwnerFact, OwnerFactIngress } from "../bootstrap/contracts.js";
 import { deepFreeze, type DeliveryConfigProjection, type DeliveryConfigProjectionV2 } from "../configuration/index.js";
-import type { RunnerActivationContext } from "../contracts/index.js";
+import type { PreservedResultRef, RunnerActivationContext } from "../contracts/index.js";
 import type { RunnerStartCorrelationFact, RunnerStartCorrelationPort } from "../coordinator/runner-coordinator.js";
 import type { ExecutionPrebindingReady } from "../core/execution-core.js";
 import { EXECUTION_RUNTIME_ADAPTER_VERSION, type ExecutionRuntimeAdapter, type ExecutionRuntimeResult } from "../execution/runtime-adapter.js";
@@ -42,6 +42,7 @@ export interface DeliveryRuntimeFactory {
 }
 
 export interface DeliveryLifecycleOptions {
+  readonly tasks?: { select(id: string, displayName: string | undefined, reuse: boolean): Promise<string> };
   readonly resolver: Pick<WorkflowPackageResolver, "resolve">;
   readonly manifests: DeliveryManifestRepository;
   readonly snapshotRoot: string;
@@ -53,6 +54,7 @@ export interface DeliveryLifecycleOptions {
   readonly clock: ClockPort;
   readonly ids: IdPort;
   readonly invalidations?: Readonly<{ publish(): void }>;
+  readonly results?: Readonly<{ publish(manifest: ProductionDeliveryManifest, reference: PreservedResultRef): Promise<void> }>;
   readonly completed?: Readonly<{
     publish(manifest: ProductionDeliveryManifest, terminal: Readonly<{ outcome: "SUCCEEDED" | "FAILED" | "CANCELLED"; finishedAt: number }>, error: Readonly<{ code: string }> | null): Promise<void>;
   }>;
@@ -246,9 +248,13 @@ export class DeliveryLifecycleService {
     const taskId = ready.command.taskSelection.mode === "REUSE_TASK"
       ? ready.command.taskSelection.taskId
       : `task-${deliveryId}`;
-    const taskDisplayName = ready.command.taskSelection.mode === "NEW_TASK"
+    let taskDisplayName = ready.command.taskSelection.mode === "NEW_TASK"
       ? ready.command.taskSelection.displayName
       : undefined;
+    if (this.#options.tasks) {
+      try { taskDisplayName = await this.#options.tasks.select(taskId, taskDisplayName, ready.command.taskSelection.mode === "REUSE_TASK"); }
+      catch { await ready.holder.release(); return failure("DELIVERY_BINDING_FAILED"); }
+    }
     let snapshot;
     try {
       snapshot = await captureTaskPromptSnapshot({
@@ -461,6 +467,12 @@ export class DeliveryLifecycleService {
       });
     }
     if (!terminalCorrelated(result, activation)) return failure("RUNNER_RESULT_INVALID");
+    if (result.result?.state === "known") {
+      const actual = result.result.value.delivery, expected = exactDelivery(activation);
+      if (actual.deliveryIdentity !== expected.deliveryIdentity || actual.manifestBindingIdentity !== expected.manifestBindingIdentity
+        || actual.activationBindingIdentity !== expected.activationBindingIdentity) return failure("RUNNER_RESULT_INVALID");
+      await this.#options.results?.publish(manifest, result.result.value);
+    }
     if (state === "START_UNCERTAIN") {
       ownerFacts.emit({ owner: "M02", name: "start-correlated", occurredAt: this.#options.clock.now() });
       await this.#options.slots.transition(manifest.canonicalWorktree, "M02_START_CORRELATED", this.#options.clock.now());

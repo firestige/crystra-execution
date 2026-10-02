@@ -14,7 +14,8 @@
     }
   },
   "bin": {
-    "execution-config": "./dist/configuration/cli.js"
+    "execution-config": "./dist/configuration/cli.js",
+    "workflow-local-source": "./dist/configuration/local-source-cli.js"
   },
   "files": [
     "dist",

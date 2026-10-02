@@ -6,6 +6,8 @@ import type { ValidatedWorkflowPackage } from "./workflow-package-store.js";
 
 export type WorkflowPackageResolutionErrorCode =
   | "INVALID_WORKFLOW_SELECTOR"
+  | "WORKFLOW_EXACT_VERSION_REQUIRED"
+  | "WORKFLOW_PRERELEASE_REQUIRES_PRIVATE_SOURCE"
   | "WORKFLOW_NOT_FOUND"
   | "WORKFLOW_FETCH_FAILED"
   | "WORKFLOW_PACKAGE_INVALID"
@@ -33,11 +35,15 @@ export class WorkflowPackageResolver {
     let request;
     try { request = parseWorkflowSelector(selector); }
     catch (cause) { return failure(cause instanceof WorkflowSelectorError ? cause.code : "INVALID_WORKFLOW_SELECTOR"); }
+    const privateSource = this.source.selectionPolicy === "exact-private";
+    if (privateSource && request.version.kind !== "EXACT") return failure("WORKFLOW_EXACT_VERSION_REQUIRED");
+    if (!privateSource && request.version.kind === "EXACT" && request.version.value.includes("-")) return failure("WORKFLOW_PRERELEASE_REQUIRES_PRIVATE_SOURCE");
     try {
       const local = request.version.kind === "EXACT"
         ? await this.store.lookupExact(request.name, request.version.value)
         : await this.store.lookupLatest(request.name);
-      if (local !== undefined && !refresh) return Object.freeze({ ok: true, value: local });
+      if (!privateSource && local?.exactVersion.includes("-")) return failure("WORKFLOW_PRERELEASE_REQUIRES_PRIVATE_SOURCE");
+      if (local !== undefined && !refresh && !privateSource) return Object.freeze({ ok: true, value: local });
     } catch (cause) {
       return failure(cause instanceof WorkflowPackageStoreError ? cause.code : "WORKFLOW_PACKAGE_INVALID");
     }
@@ -48,6 +54,7 @@ export class WorkflowPackageResolver {
     if (sourced.kind === "UNAVAILABLE") return failure("WORKFLOW_FETCH_FAILED");
     if (sourced.kind === "DIGEST_MISMATCH") return failure("WORKFLOW_DIGEST_MISMATCH");
     if (sourced.kind === "INVALID") return failure("WORKFLOW_PACKAGE_INVALID");
+    if (!privateSource && sourced.candidate.exactVersion.includes("-")) return failure("WORKFLOW_PRERELEASE_REQUIRES_PRIVATE_SOURCE");
     if (sourced.candidate.name !== request.name
       || (request.version.kind === "EXACT" && sourced.candidate.exactVersion !== request.version.value)) {
       return failure("WORKFLOW_VERSION_MISMATCH");

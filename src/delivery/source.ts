@@ -4,6 +4,7 @@ import type { NetworkPort, WorkflowPackageCandidate, WorkflowPackageSource, Work
 import { SourceFactorySelectionError } from "../bootstrap/index.js";
 import type { WorkflowSourceConfiguration } from "../configuration/index.js";
 import { isExactWorkflowVersion } from "./selector.js";
+import { LOCAL_WORKFLOW_SOURCE_KEY, LocalWorkflowPackageSource } from "./local-workflow-source.js";
 
 export type { WorkflowPackageSource } from "../bootstrap/index.js";
 
@@ -312,6 +313,7 @@ export class GitHubWorkflowPackageSource implements WorkflowPackageSource {
   }
 
   async fetch(request: WorkflowPackageSourceRequest): Promise<WorkflowPackageSourceResult> {
+    if (request.version.kind === "EXACT" && request.version.value.includes("-")) return Object.freeze({ kind: "INVALID" });
     const releases: Release[] = [];
     for (let page = 1; page <= MAX_RELEASE_PAGES; page += 1) {
       const response = await this.#request(`${this.configuration.releasesBaseUrl}?per_page=${PAGE_SIZE}&page=${page}`);
@@ -404,7 +406,9 @@ export class GitHubWorkflowPackageSource implements WorkflowPackageSource {
 export type AlternateWorkflowPackageSourceFactory = (configurationFile: string) => WorkflowPackageSource;
 export class WorkflowPackageSourceRegistry {
   readonly #factories: Readonly<Record<string, AlternateWorkflowPackageSourceFactory>>;
-  constructor(factories: Readonly<Record<string, AlternateWorkflowPackageSourceFactory>>) { this.#factories = factories; }
+  constructor(factories: Readonly<Record<string, AlternateWorkflowPackageSourceFactory>>) {
+    this.#factories = { ...factories, [LOCAL_WORKFLOW_SOURCE_KEY]: (file) => new LocalWorkflowPackageSource(file) };
+  }
   create(key: string, configurationFile: string): WorkflowPackageSource {
     const factory = this.#factories[key];
     if (factory === undefined) throw new SourceFactorySelectionError(key);

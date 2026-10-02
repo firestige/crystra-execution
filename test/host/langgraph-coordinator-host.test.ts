@@ -1262,3 +1262,30 @@ describe("LangGraph CoordinatorHost", () => {
     })).toMatchObject({ ok: true, value: { kind: "intervention", intervention: { reason: "RECOVERY_EXHAUSTED" } } });
   });
 });
+
+it('archives declared artifact bodies for exact result inspection independently of checkpoint retirement',async()=>{
+ const directory=checkpointDirectory();
+ const compiled=compiledActivation(draft=>{
+  draft.program.dataflow.edges=[{source:{kind:'site-result',site:{kind:'node',nodeIdentity:'node.action'},slot:{kind:'whole'}},target:{kind:'artifact',artifactIdentity:'artifact.output'}}];
+ });
+ const content={answer:'actual artifact body'};
+ const host=createLangGraphCoordinatorHost({checkpointDirectory:directory,custody:new FakeCustody(),invocation:new FakeInvocation(dispatch=>completed(dispatch,content))});
+ const result=await host.start(compiled,{publish:async()=>({ok:true,value:undefined})});
+ expect(result.ok).toBe(true);
+ if(!result.ok||result.value.kind!=='terminal-proposal'||result.value.proposal.result.state!=='known')throw Error('terminal result missing');
+ const reference=result.value.proposal.result.value.artifacts['artifact.output' as never]!;
+ const {ArtifactContentStore}=await import('../../src/host/artifact-content-store.js');
+ expect(await new ArtifactContentStore(path.join(directory,'artifact-content')).read(reference)).toMatchObject({state:'available',content});
+});
+
+it('publishes owner-issued Workflow Run identity and actual visits without replay creating a second run',async()=>{
+ const directory=checkpointDirectory(),compiled=compiledActivation(()=>undefined);
+ const host=createLangGraphCoordinatorHost({checkpointDirectory:directory,custody:new FakeCustody(),invocation:new FakeInvocation(dispatch=>completed(dispatch,{answer:'done'}))});
+ await host.start(compiled,{publish:async()=>({ok:true,value:undefined})});
+ const {WorkflowRunViewStore}=await import('../../src/host/workflow-run-view.js');
+ const store=new WorkflowRunViewStore(directory),request={taskId:compiled.correlation.taskIdentity,deliveryId:compiled.correlation.deliveryIdentity};
+ const first=await store.read(request);expect(first.state).toBe('available');if(first.state!=='available')throw Error('missing projection');
+ expect(first.value.workflowRunId).toMatch(/^workflow-run-/);expect(first.value.visits.some(v=>v.target==='node.action')).toBe(true);expect(first.value.status).toBe('terminal-proposal');
+ await host.start(compiled,{publish:async()=>({ok:true,value:undefined})});
+ expect(await store.read(request)).toEqual(first);
+});

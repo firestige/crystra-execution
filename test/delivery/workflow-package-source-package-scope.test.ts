@@ -97,12 +97,10 @@ describe("package-scoped GitHub Workflow Source", () => {
     expect(calls).not.toContain("https://api.github.com/repos/example/workflows/releases/latest");
   });
 
-  it("admits an exact prerelease but excludes all prereleases from latest", async () => {
+  it("requires a private source for exact prereleases and excludes them from latest", async () => {
     const candidate = source([{ name: "demo", version: "2.0.0-rc.2", prerelease: true }]);
     await expect(candidate.fetch({ name: "demo", version: { kind: "LATEST" } })).resolves.toEqual({ kind: "NOT_FOUND" });
-    await expect(candidate.fetch({ name: "demo", version: { kind: "EXACT", value: "2.0.0-rc.2" } })).resolves.toMatchObject({
-      kind: "FOUND", candidate: { exactVersion: "2.0.0-rc.2" },
-    });
+    await expect(candidate.fetch({ name: "demo", version: { kind: "EXACT", value: "2.0.0-rc.2" } })).resolves.toEqual({kind:"INVALID"});
   });
 
   it("isolates an exact version from same-package historical prerelease, legacy, and damaged assets", async () => {

@@ -113,7 +113,15 @@ export function createCopilotAgentProviderFactory(options: CopilotAgentProviderF
   const resolveRuntime = options.resolveRuntime ?? resolveInstalledCopilotSdkRuntime; const turnTimeoutMs = options.turnTimeoutMs ?? 7_200_000;
   if (!Number.isSafeInteger(turnTimeoutMs) || turnTimeoutMs < 1) throw new TypeError("Copilot turn timeout is invalid");
   const descriptor = Object.freeze({ schemaVersion: "execution.agent-provider-factory@1.0.0" as const, identity: COPILOT_PROVIDER_IDENTITY, version: COPILOT_RUNTIME_VERSION, adapterKey: "copilot-sdk" as const, capabilities: Object.freeze(["action-interaction", "structured-completion"] as const) });
-  return Object.freeze({ descriptor, async acquire(request: AgentProviderDeliveryRealmRequest): Promise<AgentProviderDeliveryRealmLease> {
+  return Object.freeze({ descriptor, async listModels() {
+    const runtime = await (options.resolveRuntime ?? resolveInstalledCopilotSdkRuntime)(); exactRuntime(runtime);
+    const client = runtime.createClient({mode:"empty",useLoggedInUser:true,workingDirectory:process.cwd(),baseDirectory:homedir(),logLevel:"error"});
+    try {
+      await client.start();
+      if ((await client.getStatus()).version !== COPILOT_RUNTIME_VERSION || !(await client.getAuthStatus()).isAuthenticated) throw Error("COPILOT_MODEL_QUERY_UNAVAILABLE");
+      return (await client.listModels()).map(({id})=>({provider:"github-copilot",model:id}));
+    } finally { try { const errors = await client.stop(); if(errors.length) await client.forceStop(); } catch { await client.forceStop(); } }
+  }, async acquire(request: AgentProviderDeliveryRealmRequest): Promise<AgentProviderDeliveryRealmLease> {
     if (request.providerIdentity !== descriptor.identity || request.providerVersion !== descriptor.version || !isAbsolute(request.canonicalWorktree) || await realpath(request.canonicalWorktree) !== request.canonicalWorktree || request.roleBindings.length === 0) throw new TypeError("Copilot Delivery realm request is invalid");
     const roles = new Map<string, { modelProviderId: string; modelId: string }>(); for (const role of request.roleBindings) { if (roles.has(role.roleId) || role.modelProviderId !== "github-copilot" || role.modelId === "") throw new TypeError("Copilot Role binding is invalid"); roles.set(role.roleId, { modelProviderId: role.modelProviderId, modelId: role.modelId }); }
     const runtime = await resolveRuntime(); exactRuntime(runtime); const client = runtime.createClient({ mode: "empty", useLoggedInUser: true, workingDirectory: request.canonicalWorktree, baseDirectory: join(homedir(), ".copilot"), logLevel: "error" });

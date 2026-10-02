@@ -1,5 +1,10 @@
+import { TaskRepository, TaskQuery } from "../tasks/task-query.js";
+import {WorkflowRunViewStore} from '../host/workflow-run-view.js';
+import {ArtifactContentStore,type ArtifactContentView} from '../host/artifact-content-store.js';
+import {DeliveryBusinessResultJournal, type DeliveryBusinessResultView} from "../delivery/business-result-journal.js";
+import {createGitCustody} from "../custody/git-custody.js";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { ExecutionApplication, ExecutionFailure, ExecutionRequest, ExecutionResult, TaskPrompt } from "../application/execution-application.js";
@@ -9,6 +14,7 @@ import {
   DeliveryAgentProviderRealmBroker,
   createDefaultProductionAgentProviderFactories,
   type AgentProviderRealmFactory,
+  type ProviderModelCatalogEntry,
   type ProviderAdapterKey,
 } from "../composition/agent-provider-production.js";
 import { canonicalDigest, type FrozenJsonValue, type RunnerActivationContext } from "../contracts/index.js";
@@ -36,7 +42,7 @@ import {
   type OccupiedCurrentSlot,
 } from "../delivery/index.js";
 import { DeliveryCompletedFactJournal } from "../delivery/control-plane-journal.js";
-import { loadExecutionInstallationConfigV2, type ExecutionInstallationConfigV2 } from "../configuration/index.js";
+import { parseExecutionConfigurationDocument, validateExecutionInstallationConfigV2, loadExecutionInstallationConfigV2, type ExecutionInstallationConfigV2 } from "../configuration/index.js";
 import { createDeliveryObservationEmitter, createObservationOwnerFact, createRunnerOwnerFactPort, type DeliveryObservationEmitter, type ObservationFamilySchema, type ObservationProfileOwnerFact, type RunnerSettlementOwnerFact } from "../observation/index.js";
 import type { HostOperationHandler } from "../host/workflow-host-adapter-factory.js";
 import type { ExecutionRuntimeAdapter } from "../execution/runtime-adapter.js";
@@ -353,11 +359,34 @@ class ProductionAgentProviderRuntimeManager implements DeliveryRuntimeFactory {
 }
 
 export interface ExecutionApplicationControl extends WorkflowIntakeControlPort {
+  admitTask(header: import('../tasks/task-query.js').TaskHeader): Promise<import('../tasks/task-query.js').TaskHeader>;
   executeFromConversationWorkspace(request: ExecutionRequest, authorization: ConversationWorkspaceAuthorization): Promise<ExecutionResult>;
   bindingInventory(): Promise<readonly IntakeDeliveryBindingInventoryItem[]>;
+  planningCapabilities(): Promise<Readonly<{providers:readonly ProviderModelCatalogEntry[];workflowSource:Readonly<{kind:string;repository?:string;adapterKey?:string;adapterConfigFile?:string;exactVersionRequired?:boolean}>}>>;
+  readWorkflowRun(request: Readonly<{taskId:string;deliveryId:string}>): ReturnType<WorkflowRunViewStore['read']>;
+  readArtifactContent(request: Readonly<{taskId:string;deliveryId:string;resultIdentity:string;artifactId:string}>): Promise<ArtifactContentView>;
+  readBusinessResult(request: Readonly<{taskId: string; deliveryId: string}>): Promise<DeliveryBusinessResultView>;
   attach(deliveryId: string, correlation: string): void;
   waitForDelivery(correlation: string, timeoutMs: number): Promise<Readonly<{ deliveryId: string; worktree: string; deliveryBindingIdentity: string }> | undefined>;
   answerAction(request: Readonly<{ correlation: string; prompt: TaskPrompt }>): Promise<ExecutionResult>;
+}
+
+/** Read-only host composition: no runtime, provider realm, or application activation. */
+export async function openExecutionTaskQuery(configFile: string): Promise<TaskQuery> {
+  if (!path.isAbsolute(configFile)) throw new TypeError("TASK_QUERY_CONFIG_PATH_INVALID");
+  const config = validateExecutionInstallationConfigV2(parseExecutionConfigurationDocument(configFile, await readFile(configFile, "utf8")));
+  // Cold queries need only the durable root, not writable state or available worktrees.
+  const root = await realpath(config.paths.stateRoot);
+  if (!(await stat(root)).isDirectory()) throw new TypeError("TASK_QUERY_ROOT_INVALID");
+  const manifests = new DeliveryManifestRepositoryV2(path.join(root, "manifests"));
+  return new TaskQuery(new TaskRepository(path.join(root, "tasks")), () => manifests.list());
+}
+
+const TASK_QUERIES = new WeakMap<ExecutionApplication, TaskQuery>();
+export function getExecutionTaskQuery(application: ExecutionApplication): TaskQuery {
+  const query = TASK_QUERIES.get(application);
+  if (!query) throw new TypeError("EXECUTION_TASK_QUERY_UNKNOWN");
+  return query;
 }
 
 const CONTROLS = new WeakMap<ExecutionApplication, ExecutionApplicationControl>();
@@ -397,6 +426,8 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
     const config = loaded.config;
     const slots = new CurrentSlotRepository(config.paths.currentSlotRoot);
     const manifests = new DeliveryManifestRepositoryV2(config.paths.manifestRoot);
+    const taskRepository = new TaskRepository(path.join(config.paths.stateRoot, "tasks"));
+    const taskQuery = new TaskQuery(taskRepository, () => manifests.list());
     const agentProviders = new AgentProviderFactoryRegistry(this.#agentProviderFactories ?? createDefaultProductionAgentProviderFactories({
       stateRoot: config.paths.stateRoot,
       startupTimeoutMs: config.controls.startupTimeoutMs,
@@ -423,7 +454,9 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
       new WorkflowPackageSourceRegistry(this.#alternateSources),
     );
     const resolver = new WorkflowPackageResolver(
-      new WorkflowPackageStore({ readyRoot: config.paths.packageStoreRoot, stagingRoot: config.paths.stagingRoot }),
+      new WorkflowPackageStore({ readyRoot: source.cacheNamespace
+        ? path.join(config.paths.packageStoreRoot, "sources", createHash("sha256").update(source.cacheNamespace).digest("hex"))
+        : config.paths.packageStoreRoot, stagingRoot: config.paths.stagingRoot }),
       source,
       new FrozenWorkflowPackageValidatorV2({
         contractVersion: "2.0.0",
@@ -453,7 +486,21 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
     });
     const interactions = new ProductionInteractionBroker(dependencies.intake, invalidations.publish);
     const runtime = new ProductionAgentProviderRuntimeManager(config, dependencies, observation, interactions, this.#hostOperationFactories, agentProviders);
+    const businessResults = new DeliveryBusinessResultJournal(path.join(config.paths.stateRoot, "business-results"));
     const lifecycleOptions = {
+      tasks: {
+        async select(id: string, displayName: string | undefined, reuse: boolean) {
+          if (reuse) {
+            const task = (await taskQuery.snapshot()).items.find(item => item.id === id);
+            if (!task) throw new Error("TASK_UNKNOWN");
+            return task.title;
+          }
+          await taskRepository.create({ id, title: displayName || id, createdAt: dependencies.clock.now() });
+          invalidations.publish();
+          return displayName || id;
+        },
+      },
+      results: Object.freeze({publish: businessResults.persist.bind(businessResults)}),
       resolver,
       manifests,
       snapshotRoot: `${config.paths.stateRoot}/prompt-snapshots`,
@@ -601,8 +648,21 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
     }
 
     const control: ExecutionApplicationControl = Object.freeze({
+      admitTask: (header: import('../tasks/task-query.js').TaskHeader) => taskRepository.admit(header),
       executeFromConversationWorkspace: (request: ExecutionRequest, authorization: ConversationWorkspaceAuthorization) => executeRequest(request, authorization),
       bindingInventory: readBindingInventory,
+      planningCapabilities:async()=>({providers:await agentProviders.modelCatalog(),workflowSource:{kind:config.workflowSource.kind,...(config.workflowSource.kind==='github'?{repository:config.workflowSource.repository}:{adapterKey:config.workflowSource.adapterKey,...(config.workflowSource.adapterKey==='workflow.local.v1'?{adapterConfigFile:config.workflowSource.adapterConfigFile,exactVersionRequired:true}:{})})}}),
+      readWorkflowRun: (request:Readonly<{taskId:string;deliveryId:string}>) => new WorkflowRunViewStore(path.join(config.paths.runner.root,segment(request.deliveryId),'checkpoints')).read(request),
+      async readArtifactContent(request:Readonly<{taskId:string;deliveryId:string;resultIdentity:string;artifactId:string}>){
+        const result=await businessResults.read(request,reference=>createGitCustody({recordsDirectory:path.join(config.paths.runner.root,segment(request.deliveryId),'custody') as import('../contracts/index.js').AbsolutePath}).readPreservedResult(reference));
+        if(result.state!=='available'||result.reference.identity!==request.resultIdentity)return {state:'unavailable' as const,reason:'ARTIFACT_RESULT_MISMATCH'};
+        const artifact=result.result.artifacts[request.artifactId as import('../contracts/index.js').ArtifactId];
+        if(!artifact)return {state:'unavailable' as const,reason:'ARTIFACT_NOT_IN_RESULT'};
+        return new ArtifactContentStore(path.join(config.paths.runner.root,segment(request.deliveryId),'checkpoints','artifact-content')).read(artifact);
+      },
+      readBusinessResult: (request: Readonly<{taskId: string; deliveryId: string}>) => businessResults.read(request, reference => createGitCustody({
+        recordsDirectory: path.join(config.paths.runner.root, segment(request.deliveryId), "custody") as import("../contracts/index.js").AbsolutePath,
+      }).readPreservedResult(reference)),
       async list() {
         return Object.freeze((await readBindingInventory()).map(({ deliveryBindingIdentity: _identity, ...item }) => Object.freeze(item))) as readonly IntakeDeliveryInventoryItem[];
       },
@@ -645,6 +705,7 @@ export class DefaultExecutionApplicationFactory implements ExecutionApplicationF
         return application.inspect(target.worktree);
       },
     });
+    TASK_QUERIES.set(application, taskQuery);
     CONTROLS.set(application, control);
     CONTROL_PLANE.set(application, new DeliveryControlPlaneProjection({
       slots,

@@ -2,7 +2,7 @@
   "schemaVersion": "crystra.execution-development-inputs@1.0.0",
   "contracts": {
     "repository": "firestige/crystra-contracts",
-    "revision": "f2d373a1eaea945dc8ca0b9a66ff383f2b0117ce",
+    "revision": "e387cfc6b3b10845507615766f79a0f92db699ce",
     "path": ".crystra-inputs/contracts"
   },
   "workflow": {

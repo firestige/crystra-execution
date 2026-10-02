@@ -1,3 +1,6 @@
+import {WorkflowRunViewStore,type RunVisit} from './workflow-run-view.js';
+import {randomUUID} from 'node:crypto';
+import {ArtifactContentStore} from './artifact-content-store.js';
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 
@@ -85,11 +88,14 @@ interface PendingWorkflow {
 }
 
 interface HostThreadRecord {
+  workflowRunId: string;
+  visits: RunVisit[];
   readonly compiled: CompiledGraphActivation;
   readonly thread: ThreadRef;
   currentTarget: Target;
   state: Record<string, FrozenJsonValue>;
   artifacts: Record<string, ArtifactVersionRef | Absent>;
+  artifactContents?: Record<string, FrozenJsonValue>;
   siteResults: Record<string, FrozenJsonValue>;
   controlResults: Record<string, FrozenJsonValue>;
   savepoint: Knowledge<SavepointRef>;
@@ -115,6 +121,7 @@ interface HostRetirementRow {
 interface ProjectedCommit {
   readonly state: Record<string, FrozenJsonValue>;
   readonly artifacts: Record<string, ArtifactVersionRef | Absent>;
+  readonly artifactContents: Record<string, FrozenJsonValue>;
 }
 
 const HostCheckpointState = Annotation.Root({
@@ -361,8 +368,12 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
   readonly #operations: LangGraphCoordinatorHostOptions["hostOperations"];
   readonly #checkpointer: SqliteSaver;
   readonly #graph;
+  readonly #artifactContent: ArtifactContentStore;
+  readonly #runView: WorkflowRunViewStore;
 
   constructor(options: LangGraphCoordinatorHostOptions) {
+    this.#runView=new WorkflowRunViewStore(options.checkpointDirectory);
+    this.#artifactContent = new ArtifactContentStore(path.join(options.checkpointDirectory,'artifact-content'));
     this.#invocation = options.invocation;
     this.#custody = options.custody;
     this.#operations = options.hostOperations ?? {};
@@ -401,6 +412,8 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
     const baseline = await this.#custody.establishBaseline({ delivery, workspace: compiled.initial.workspace });
     if (!baseline.ok) return failure(baseline.error.code);
     const record: HostThreadRecord = {
+      workflowRunId: `workflow-run-${randomUUID()}`,
+      visits: [],
       compiled,
       thread,
       currentTarget: compiled.plan.control.entryNode,
@@ -571,6 +584,7 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
   async #drive(record: HostThreadRecord, output: ActionOutputSink): Promise<Result<HostDisposition, HostError>> {
     if (record.stopped) return record.disposition === undefined ? this.#intervention(record, "CANCELLED") : success(record.disposition);
     for (;;) {
+      record.visits.push({id:`visit-${record.visits.length+1}`,target:record.currentTarget,enteredAt:new Date().toISOString()});
       const terminal = record.compiled.plan.control.terminals[record.currentTarget as keyof typeof record.compiled.plan.control.terminals];
       if (terminal !== undefined) return this.#declaredTerminal(record, terminal.kind);
       const decision = record.compiled.plan.control.decisions[record.currentTarget as keyof typeof record.compiled.plan.control.decisions];
@@ -717,6 +731,7 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
     if (!("kind" in settled.value.nextSavepoint.value)) record.savepoint = known(settled.value.nextSavepoint.value);
     record.state = outgoing.state;
     record.artifacts = outgoing.artifacts;
+    record.artifactContents = outgoing.artifactContents;
     record.siteResults[pending.siteKey] = disposition.result;
     delete record.pendingAction;
     delete record.disposition;
@@ -850,6 +865,7 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
     if (projected === undefined) return false;
     record.state = projected.state;
     record.artifacts = projected.artifacts;
+    record.artifactContents = projected.artifactContents;
     return true;
   }
 
@@ -857,6 +873,7 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
     const edges = record.compiled.plan.dataflow.outgoingByProducer[producer as keyof typeof record.compiled.plan.dataflow.outgoingByProducer] ?? [];
     const state = { ...record.state };
     const artifacts = { ...record.artifacts };
+    const artifactContents = { ...record.artifactContents };
     for (const edge of edges) {
       const projected = edge.source.kind === "site-result" || edge.source.kind === "control-result"
         ? project(value, edge.source.slot)
@@ -865,6 +882,7 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
       if (edge.target.kind === "state") state[edge.target.field] = projected;
       else if (edge.target.kind === "artifact") {
         const contentIdentity = canonicalDigest(projected);
+        artifactContents[edge.target.artifactIdentity] = projected;
         artifacts[edge.target.artifactIdentity] = {
           artifactIdentity: edge.target.artifactIdentity,
           versionIdentity: stableId("artifact-version", { artifact: edge.target.artifactIdentity, contentIdentity, producer }),
@@ -872,7 +890,7 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
         };
       }
     }
-    return { state, artifacts };
+    return { state, artifacts, artifactContents };
   }
 
   async #passesGate(action: AdmittedActionTemplate, value: FrozenJsonValue): Promise<boolean> {
@@ -944,6 +962,9 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
 
   async #declaredTerminal(record: HostThreadRecord, kind: string): Promise<Result<HostDisposition, HostError>> {
     const artifacts = Object.fromEntries(Object.entries(record.artifacts).filter((entry): entry is [string, ArtifactVersionRef] => !("kind" in entry[1])));
+    for(const [id,reference] of Object.entries(artifacts)){
+      if(Object.hasOwn(record.artifactContents??{},id))await this.#artifactContent.put(reference,record.artifactContents![id]!);
+    }
     const content = record.state as FrozenJsonValue;
     const result: BoundedWorkflowResult = {
       identity: stableId<WorkflowResultId>("workflow-result", { thread: record.thread, content, artifacts }),
@@ -1000,6 +1021,9 @@ export class LangGraphCoordinatorHost implements CoordinatorHost {
 
   async #persist(record: HostThreadRecord): Promise<void> {
     await this.#graph.invoke({ record }, { configurable: { thread_id: record.thread.threadIdentity } });
+    const c=record.compiled.correlation;
+    await this.#runView.put({schema:'execution.workflow-run-view@1',taskId:c.taskIdentity,deliveryId:c.deliveryIdentity,workflowRunId:record.workflowRunId,workflowId:c.workflowIdentity,bindingIdentity:c.manifestBindingIdentity,updatedAt:new Date().toISOString(),currentTarget:record.currentTarget,status:record.stopped?'stopped':record.disposition?.kind??'running',visits:record.visits,control:record.compiled.plan.control}).catch(()=>undefined);
+
   }
 
   async #load(thread: ThreadRef): Promise<HostThreadRecord | undefined> {

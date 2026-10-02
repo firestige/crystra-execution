@@ -102,6 +102,12 @@ async function fixture(): Promise<CreateDeliveryManifestV2Input> {
 }
 
 describe("Delivery Manifest 2.0", () => {
+  it('binds an exact RC Package and still rejects aliases and ranges',async()=>{
+    const input=await fixture();
+    const candidate={...input,workflowPackage:{...input.workflowPackage,exactVersion:'1.2.3-rc.1'}};
+    expect(createDeliveryManifestV2(candidate).workflowPackage.exactVersion).toBe('1.2.3-rc.1');
+    for(const exactVersion of ['latest','^1.2.3','1.2'])expect(()=>createDeliveryManifestV2({...candidate,workflowPackage:{...candidate.workflowPackage,exactVersion}})).toThrow();
+  });
   it("creates one frozen closed Manifest whose identity covers Workflow, repository, Role, prompt, worktree, and config bindings", async () => {
     const input = await fixture();
     const manifest = createDeliveryManifestV2(input);

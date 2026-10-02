@@ -23,6 +23,7 @@ const PORTABLE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,1023}$/u;
 const IDENTITY = /^[A-Za-z][A-Za-z0-9._-]{0,127}$/u;
 const PACKAGE_NAME = /^[a-z][a-z0-9-]*$/u;
 const VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u;
+const PACKAGE_VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 const PROVIDER_VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 const MAX_ROLES = 128;
 const MAX_PROJECTION_BYTES = 64 * 1024;
@@ -168,7 +169,7 @@ export function createDeliveryManifestV2(input: CreateDeliveryManifestV2Input): 
   const repositoryValid = repo.documentState === "ABSENT"
     || (repo.documentState === "PRESENT" && SHA256.test(repo.documentDigest));
   const idsValid = PORTABLE_ID.test(input.deliveryId) && PORTABLE_ID.test(input.taskId)
-    && PACKAGE_NAME.test(input.workflowPackage.name) && VERSION.test(input.workflowPackage.exactVersion)
+    && PACKAGE_NAME.test(input.workflowPackage.name) && PACKAGE_VERSION.test(input.workflowPackage.exactVersion)
     && IDENTITY.test(input.workflowSnapshot.workflowId) && VERSION.test(input.workflowSnapshot.workflowVersion)
     && IDENTITY.test(input.workflowSnapshot.snapshotId);
   const pathsValid = isAbsolute(input.canonicalWorktree) && isAbsolute(input.workflowPackage.localMaterializationPath)
@@ -276,6 +277,14 @@ export class DeliveryManifestRepositoryV2 {
   constructor(root: string) {
     if (!isAbsolute(root)) throw new TypeError("Delivery Manifest root must be absolute");
     this.#root = resolve(root);
+  }
+
+  async list(): Promise<readonly DeliveryManifestV2[]> {
+    const { readdir } = await import("node:fs/promises");
+    let entries: string[];
+    try { entries = await readdir(this.#root); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
+    return Promise.all(entries.filter(name => name.endsWith(".json")).sort().map(name => this.load(join(this.#root, name))));
   }
 
   async persist(manifest: DeliveryManifestV2): Promise<PersistedDeliveryManifestV2> {

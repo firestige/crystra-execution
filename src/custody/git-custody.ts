@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -20,8 +21,10 @@ import {
   type ManagedWorkspaceSnapshotLimits,
 } from "./managed-workspace-snapshot.js";
 
+import {canonicalDigest} from "../contracts/index.js";
 import type {
   AbsolutePath,
+  BoundedWorkflowResult,
   AdmittedWorkspace,
   AuthorizedInvocationHandle,
   AuthorizedReadView,
@@ -50,6 +53,10 @@ import type {
   Sha256,
   WorkspaceRelativePath,
 } from "../contracts/index.js";
+
+export type PreservedBusinessResultView =
+  | Readonly<{ state: "available"; reference: PreservedResultRef; result: BoundedWorkflowResult }>
+  | Readonly<{ state: "unavailable"; reason: "PRESERVED_RESULT_MISSING" | "PRESERVED_RESULT_MISMATCH" }>;
 
 export interface GitPublicationTarget {
   readonly target: PublicationTargetRef;
@@ -80,6 +87,7 @@ interface CustodyRecord {
   handles: StoredHandle[];
   views: StoredView[];
   preservedResult?: PreservedResultRef;
+  preservedResultDigest?: Sha256;
   publication?: PublicationDisposition;
   retiredAuthorizationIdentity?: string;
 }
@@ -367,14 +375,35 @@ export class GitCustody implements HostCustody, CoordinatorCustody {
       contentIdentity: request.result.contentIdentity,
       savepoint: request.checkpoint.savepoint,
     };
-    if (record.preservedResult !== undefined && !same(record.preservedResult, preserved)) {
+    if (record.preservedResult !== undefined && (!same(record.preservedResult, preserved)
+      || (record.preservedResultDigest !== undefined && record.preservedResultDigest !== digest(request.result)))) {
       return failure("CORRELATION_MISMATCH");
     }
     const resultPath = path.join(this.#recordsDirectory, `${this.#deliveryKey(record.delivery)}.result.json`);
     this.#atomicWrite(resultPath, canonical({ reference: preserved, result: request.result }));
     record.preservedResult = preserved;
+    record.preservedResultDigest = digest(request.result);
     this.#store(record);
     return success(preserved);
+  }
+
+  /** Exact owner read: adapters never infer a result by scanning checkpoint files. */
+  async readPreservedResult(reference: PreservedResultRef): Promise<PreservedBusinessResultView> {
+    try {
+      const record = this.#load(reference.delivery);
+      if (record?.preservedResult === undefined) return { state: "unavailable", reason: "PRESERVED_RESULT_MISSING" };
+      if (!same(record.preservedResult, reference)) return { state: "unavailable", reason: "PRESERVED_RESULT_MISMATCH" };
+      const file = path.join(this.#recordsDirectory, `${this.#deliveryKey(reference.delivery)}.result.json`);
+      const stat = lstatSync(file);
+      if (!stat.isFile() || stat.size > 16 * 1024 * 1024) return { state: "unavailable", reason: "PRESERVED_RESULT_MISMATCH" };
+      const stored = JSON.parse(readFileSync(file, "utf8")) as { reference: PreservedResultRef; result: BoundedWorkflowResult };
+      if (!same(stored.reference, reference) || record.preservedResultDigest !== digest(stored.result) || stored.result.contentIdentity !== reference.contentIdentity
+        || canonicalDigest(stored.result.content) !== reference.contentIdentity || typeof stored.result.identity !== "string"
+        || stored.result.artifacts === null || typeof stored.result.artifacts !== "object" || Array.isArray(stored.result.artifacts)) {
+        return { state: "unavailable", reason: "PRESERVED_RESULT_MISMATCH" };
+      }
+      return { state: "available", reference: stored.reference, result: stored.result };
+    } catch { return { state: "unavailable", reason: "PRESERVED_RESULT_MISSING" }; }
   }
 
   async publish(request: Parameters<CoordinatorCustody["publish"]>[0]): Promise<Result<PublicationDisposition, CustodyError>> {

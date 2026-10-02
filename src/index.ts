@@ -21,3 +21,5 @@ export {
   type RunnerFactoryConfig,
   type RunnerFactoryDependencies,
 } from "./composition/runner-factory.js";
+
+export * from "./tasks/task-query.js";

@@ -490,3 +490,15 @@ describe("M01 production Delivery lifecycle", () => {
     expect(await invalidActivationService.activate(invalidActivation.ready)).toMatchObject({ kind: "ERROR", code: "DELIVERY_BINDING_FAILED" });
   });
 });
+it('publishes the accepted preserved-result reference with its original Task before completing Delivery',async()=>{
+ const f=await fixture('terminal');
+ vi.mocked(f.runtime.execute).mockImplementation(async request=>{
+  const delivery={deliveryIdentity:request.activation.correlation.deliveryIdentity,manifestBindingIdentity:request.activation.correlation.manifestBindingIdentity,activationBindingIdentity:request.activation.bindingIdentity};
+  return {ok:true,value:{kind:'terminal',outcome:'COMPLETED',settlement:{delivery},result:{state:'known',value:{identity:'preserved-1',delivery,contentIdentity:sha('result'),savepoint:{state:'unknown'}}}}} as never;
+ });
+ const published=vi.fn(async()=>{});
+ const service=new DeliveryLifecycleService({...f.options,results:{publish:published}});
+ await expect(service.activate(f.ready)).resolves.toMatchObject({kind:'TERMINAL',outcome:'SUCCEEDED'});
+ expect(published).toHaveBeenCalledOnce();
+ expect(published.mock.calls[0]).toEqual([expect.objectContaining({deliveryId:'delivery-1',taskId:expect.any(String)}),expect.objectContaining({identity:'preserved-1',contentIdentity:sha('result')})]);
+});
