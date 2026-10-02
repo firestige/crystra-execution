@@ -45,7 +45,7 @@ function provider(
 }
 
 function manifest(registry: AgentProviderFactoryRegistry): DeliveryManifestV2 {
-  const dsh = registry.admit({ identity: "provider.dsh", version: "0.1.1-rc.2" }, ["structured-completion"]);
+  const dsh = registry.admit({ identity: "provider.dsh", version: "0.1.5-rc.2" }, ["structured-completion"]);
   const codex = registry.admit({ identity: "provider.codex", version: "0.144.5" }, ["structured-completion"]);
   return Object.freeze({
     schemaVersion: "execution.delivery-manifest@2.0.0",
@@ -76,7 +76,7 @@ function manifest(registry: AgentProviderFactoryRegistry): DeliveryManifestV2 {
 
 describe("multi-Provider Delivery realm broker", () => {
   it("acquires only Providers used by the Manifest and routes each Role exactly", async () => {
-    const dsh = provider("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["structured-completion"]);
+    const dsh = provider("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["structured-completion"]);
     const codex = provider("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]);
     const unused = provider("provider.copilot", "1.0.78", "copilot-sdk", ["structured-completion"]);
     const registry = new AgentProviderFactoryRegistry([dsh.factory, codex.factory, unused.factory]);
@@ -102,7 +102,7 @@ describe("multi-Provider Delivery realm broker", () => {
   });
 
   it("recovery requires the persisted factory version, descriptor, adapter, and manifest identity exactly", async () => {
-    const dsh = provider("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["structured-completion"]);
+    const dsh = provider("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["structured-completion"]);
     const codex = provider("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]);
     const original = new AgentProviderFactoryRegistry([dsh.factory, codex.factory]);
     const exactManifest = manifest(original);
@@ -120,7 +120,7 @@ describe("multi-Provider Delivery realm broker", () => {
 
   it("rolls back already acquired realms when a later Provider fails", async () => {
     const codex = provider("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]);
-    const dsh = provider("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["structured-completion"]);
+    const dsh = provider("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["structured-completion"]);
     dsh.acquire.mockRejectedValueOnce(new Error("provider unavailable"));
     const registry = new AgentProviderFactoryRegistry([codex.factory, dsh.factory]);
     const exactManifest = manifest(registry);
@@ -131,7 +131,7 @@ describe("multi-Provider Delivery realm broker", () => {
   });
 
   it("rejects a factory that republishes a previously leased realm", async () => {
-    const dsh = provider("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["structured-completion"]);
+    const dsh = provider("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["structured-completion"]);
     const codex = provider("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]);
     const registry = new AgentProviderFactoryRegistry([dsh.factory, codex.factory]);
     const exactManifest = manifest(registry);

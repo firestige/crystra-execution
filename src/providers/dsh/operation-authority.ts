@@ -65,6 +65,8 @@ export function createDshOperationAuthority(closure: DshPublicClosure, workspace
         options: () => connection,
         resolveApiKey: async () => grant.credential.value,
         resolveUserId: () => "00000000-0000-4000-8000-000000000000",
+        // This isolated operation admits no ambient DeepSeek request extensions.
+        prepareExtensions: async () => ({ fields: {}, async accept() {} }),
       });
       context.on("llm/stream", (options) => {
         if (options.provider !== grant.provider || options.model !== grant.model) {

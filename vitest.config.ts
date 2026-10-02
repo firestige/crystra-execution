@@ -15,6 +15,8 @@ export default defineConfig({
         "scripts/build-workflow-release-assets.ts",
         "scripts/benchmark-managed-workspace-snapshot.ts",
         "scripts/qualify-current-source-browser.ts",
+        // Browser orchestration is qualified by the public crystra-dsh host.
+        "scripts/qualify-dsh-interactive-intake.ts",
         "scripts/qualify-dsh-product-e2e.ts",
         "scripts/serve-workflow-assets.ts",
         "scripts/verify-iteration-3-documentation.ts",

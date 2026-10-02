@@ -23,7 +23,7 @@ interface DshSessionEvent {
 
 interface DshAgent {
   readonly id: string;
-  readonly session: { readonly seq: number; readonly events: readonly DshSessionEvent[] };
+  readonly session: { readonly seq: number; ownEvents(): readonly DshSessionEvent[] };
   followup(message: unknown): void;
   whenIdle(): Promise<void>;
   cancel(cause: { readonly kind: "user" }): void;
@@ -200,7 +200,7 @@ class DshNativeProviderSession implements NativeProviderSession {
     }));
     await this.handle.agent.whenIdle();
     const output: NativeTurnEvent[] = [];
-    for (const event of this.handle.agent.session.events) {
+    for (const event of this.handle.agent.session.ownEvents()) {
       if (event.seq < firstSequence) continue;
       if (event.type === "turn/end") {
         const reason = event.data?.reason as { kind?: string } | undefined;

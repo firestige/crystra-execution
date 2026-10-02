@@ -12,7 +12,7 @@ describe("Iteration 3 locked DSH feasibility", () => {
   it("loads the package-declared bundle through the real DSH profile composer", () => {
     const composed = probeDshBundleLoader();
 
-    expect(composed.packageVersion).toBe("0.1.1-rc.2");
+    expect(composed.packageVersion).toBe("0.1.5-rc.2");
     expect(composed.profileBundles).toContain("@crystra/dsh-intake-feasibility");
     expect(composed.row).toEqual({
       id: "workflow-execution",
@@ -32,7 +32,7 @@ describe("Iteration 3 locked DSH feasibility", () => {
   it("discovers and loads an explicit package skill with the locked filesystem provider", async () => {
     const skill = await probeDshSkillFilesystem();
 
-    expect(skill.packageVersion).toBe("0.1.1-rc.2");
+    expect(skill.packageVersion).toBe("0.1.5-rc.2");
     expect(skill.summary.name).toBe("workflow-execution");
     expect(skill.summary.invocation).toEqual({ modelInvocable: false, userInvocable: true });
     expect(skill.content).toContain("workflow_execution_activate");
@@ -52,7 +52,7 @@ describe("Iteration 3 locked DSH feasibility", () => {
   it("proves Cordis isolate is a service realm inside one Context, not a second runtime instance", async () => {
     const observation = await probeCordisIsolation();
 
-    expect(observation.packageVersion).toBe("4.0.1");
+    expect(observation.packageVersion).toBe("4.0.2");
     expect(observation.isolatedSharesRoot).toBe(true);
     expect(observation.independentSharesRoot).toBe(false);
     expect(observation.parentService).toBe("intake");

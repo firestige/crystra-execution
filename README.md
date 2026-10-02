@@ -68,7 +68,7 @@ The explicit first-party skill `/workflow-execution` performs exactly one closed
 | Dimension | Requirement |
 |---|---|
 | Node.js | `>=24.12.0 <25` |
-| DeepSeek Harness | `0.1.1-rc.2` (`@deepseek-ai/dsh`) |
+| DeepSeek Harness | `0.1.5-rc.2` (`@deepseek-ai/dsh`) |
 | Workflow Package contract | `agentops.workflow-dsl@2.0.0` |
 | Observation contract | `agentops.observation@1.0.0` |
 | Checkpoint store | `better-sqlite3` (native build, approved via `allowBuilds`) |
@@ -87,7 +87,7 @@ The explicit first-party skill `/workflow-execution` performs exactly one closed
 
 ### Direct embedding
 
-For host-neutral embedding, import `ExecutionApplicationFactory`, `DefaultExecutionApplicationFactory`, `ExecutionRequest`, `TaskPrompt`, and the configuration types from the package root. Calling the default factory's `create(configFile, dependencies)` is the single production bootstrap path. The exact DSH runtime is an optional peer: package-root import/type consumers need not install it, while executing the current `dsh` Provider requires the embedding profile to provide `@deepseek-ai/dsh@0.1.1-rc.2`. The release includes `config/schema/execution.config.schema.json`, versioned defaults/examples, compiled TypeScript declarations, and `execution-config init|copy|validate|dump-effective`.
+For host-neutral embedding, import `ExecutionApplicationFactory`, `DefaultExecutionApplicationFactory`, `ExecutionRequest`, `TaskPrompt`, and the configuration types from the package root. Calling the default factory's `create(configFile, dependencies)` is the single production bootstrap path. The exact DSH runtime is an optional peer: package-root import/type consumers need not install it, while executing the current `dsh` Provider requires the embedding profile to provide `@deepseek-ai/dsh@0.1.5-rc.2`. The release includes `config/schema/execution.config.schema.json`, versioned defaults/examples, compiled TypeScript declarations, and `execution-config init|copy|validate|dump-effective`.
 
 ## Multi-Provider 2.0
 
@@ -150,7 +150,9 @@ The `latest` selector continues to exclude aggregate RCs; request an exact `name
 
 ### DSH Agent Provider
 
-The default production registry includes `provider.dsh@0.1.1-rc.2` (`dsh-headless`), with structured completion and Action interaction. It runs the pinned DSH headless runtime inside an isolated Delivery realm; it does not attach to a running DSH UI session or load its ambient plugins. The optional `@deepseek-ai/dsh@0.1.1-rc.2` peer must be installed when using this Provider; other Providers do not start or load DSH.
+See [runtime migration and qualification scope](docs/dsh-015-runtime-migration.md) for the rc.2 alignment.
+
+The default production registry includes `provider.dsh@0.1.5-rc.2` (`dsh-headless`), with structured completion and Action interaction. It runs the pinned DSH headless runtime inside an isolated Delivery realm; it does not attach to a running DSH UI session or load its ambient plugins. The optional `@deepseek-ai/dsh@0.1.5-rc.2` peer must be installed when using this Provider; other Providers do not start or load DSH.
 
 Set each applicable Role in `.crystra/role-provider-bindings.json` (replace `role.reviewer` with the actual Workflow Role):
 
@@ -159,12 +161,14 @@ Set each applicable Role in `.crystra/role-provider-bindings.json` (replace `rol
   "schemaVersion": "execution.repository-role-provider-bindings@1.0.0",
   "bindings": {
     "role.reviewer": {
-      "agentProvider": { "identity": "provider.dsh", "version": "0.1.1-rc.2" },
+      "agentProvider": { "identity": "provider.dsh", "version": "0.1.5-rc.2" },
       "model": { "provider": "deepseek", "model": "deepseek-chat" }
     }
   }
 }
 ```
+
+The development lockfile pins the DSH component closure to rc.2 as well; the upstream CLI package uses ranges that can otherwise select a later RC. The adapter reads the public `Session.ownEvents()` API. Existing Deliveries retain their original provider descriptor and cannot silently resume under this new version; use the matching old runtime for those Deliveries or admit a new Delivery with the updated binding.
 
 Authentication stays inside the Provider. It reads `DEEPSEEK_API_KEY` from the process environment first, then the same reference in `$DSH_HOME/.credentials.yaml` (default `~/.dsh/.credentials.yaml`, DSH `version: 1` / `refs` format). Missing credentials fail when opening a session. It does not copy keys into bindings, manifests, or recovery records. Existing strict file-only legacy adapters retain their previous behavior.
 

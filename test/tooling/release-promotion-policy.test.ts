@@ -49,7 +49,7 @@ describe("Execution release promotion policy", () => {
       .toThrowError("FINAL_VERSION_MISMATCH");
     expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, evidence.commit, "sha256:" + "b".repeat(64)))
       .toThrowError("QUALIFICATION_ARTIFACT_MISMATCH");
-    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, evidence.commit, evidence.artifactMetadataSha256, "crystra-execution-v0.1.1-rc.2"))
+    expect(() => assertFinalPromotionEligible("crystra-execution-v0.1.1", evidence, evidence.commit, evidence.artifactMetadataSha256, "crystra-execution-v0.1.5-rc.2"))
       .toThrowError("QUALIFICATION_CANDIDATE_MISMATCH");
   });
 

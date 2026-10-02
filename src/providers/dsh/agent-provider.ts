@@ -8,10 +8,11 @@ import type {
   AgentProviderRealmFactory, AgentProviderSessionOpenRequest,
   AgentProviderDeliveryRealmRequest, NativeProviderSession, NativeTurnEvent,
 } from "../provider.js";
+import { DSH_RUNTIME_VERSION } from "./public-closure.js";
 import { DshProviderAdapterFactory } from "./adapter-factory.js";
 
 export const DSH_PROVIDER_IDENTITY = "provider.dsh";
-export const DSH_RUNTIME_VERSION = "0.1.1-rc.2";
+export { DSH_RUNTIME_VERSION } from "./public-closure.js";
 
 /** Provider-local connection settings; never part of a Delivery or credential envelope. */
 export interface DshAgentProviderFactoryOptions {

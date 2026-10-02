@@ -48,7 +48,7 @@ describe("I2-G00 selected substrate matrix", () => {
     const dsh = packageMetadata("@deepseek-ai/dsh/package.json");
     const headless = packageMetadata("@deepseek-ai/dsh-headless/package.json", [path.dirname(dshPath)]);
 
-    expect(dsh.version).toBe("0.1.1-rc.2");
+    expect(dsh.version).toBe("0.1.5-rc.2");
     expect(headless.version).toBe(dsh.version);
   });
 
@@ -63,8 +63,8 @@ describe("I2-G00 selected substrate matrix", () => {
     const agentTypes = readFileSync(path.resolve(path.dirname(agentPath), agent.types!), "utf8");
     const runtimeTypes = readFileSync(path.resolve(path.dirname(agentPath), "lib/types/runtime-types.d.ts"), "utf8");
 
-    expect(session.version).toBe("0.1.1-rc.2");
-    expect(agent.version).toBe("0.1.1-rc.2");
+    expect(session.version).toBe("0.1.5-rc.2");
+    expect(agent.version).toBe("0.1.5-rc.2");
     expect(session.exports?.["."]).toBeDefined();
     expect(agent.exports?.["."]).toBeDefined();
     expect(sessionTypes).toContain("static fromRestore");
@@ -90,7 +90,7 @@ describe("I2-G00 selected substrate matrix", () => {
     });
 
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe("0.1.1-rc.2");
+    expect(result.stdout.trim()).toBe("0.1.5-rc.2");
     expect(result.stderr).toBe("");
   });
 

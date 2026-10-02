@@ -28,7 +28,7 @@ function factory(
 }
 
 const registry = new AgentProviderFactoryRegistry([
-  factory("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
+  factory("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
   factory("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]),
 ]);
 
@@ -38,7 +38,7 @@ const present: RepositoryModelBindingsSnapshot = Object.freeze({
   documentDigest: sha("c"),
   bindings: Object.freeze({
     "role.facilitator": Object.freeze({
-      agentProvider: Object.freeze({ identity: "provider.dsh", version: "0.1.1-rc.2" }),
+      agentProvider: Object.freeze({ identity: "provider.dsh", version: "0.1.5-rc.2" }),
       model: Object.freeze({ provider: "deepseek-official", model: "deepseek-chat" }),
     }),
     "role.reviewer": Object.freeze({
@@ -46,7 +46,7 @@ const present: RepositoryModelBindingsSnapshot = Object.freeze({
       model: Object.freeze({ provider: "openai", model: "gpt-5.3-codex" }),
     }),
     "role.unused": Object.freeze({
-      agentProvider: Object.freeze({ identity: "provider.dsh", version: "0.1.1-rc.2" }),
+      agentProvider: Object.freeze({ identity: "provider.dsh", version: "0.1.5-rc.2" }),
       model: Object.freeze({ provider: "deepseek-official", model: "deepseek-reasoner" }),
     }),
   }),
@@ -74,7 +74,7 @@ describe("resolved Role-to-Provider/model bindings", () => {
           rolePromptIdentity: "role.prompt.facilitator",
           rolePromptDigest: sha("a"),
           agentProviderId: "provider.dsh",
-          agentProviderVersion: "0.1.1-rc.2",
+          agentProviderVersion: "0.1.5-rc.2",
           agentProviderAdapterKey: "dsh-headless",
           agentProviderDescriptorDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
           modelProviderId: "deepseek-official",

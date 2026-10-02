@@ -10,7 +10,7 @@ Use the issue templates:
 - [Feature request](.github/ISSUE_TEMPLATE/feature_request.yml) — a new capability or improvement.
 - [Compatibility issue](.github/ISSUE_TEMPLATE/compatibility.yml) — install / upgrade / DSH-version problems.
 
-Before filing, check the [Known Limitations](README.md#known-limitations-and-deferred-work) and confirm the compatibility line (`dsh 0.1.1-rc.2`, Node `>=24.12 <25`). **Redact API keys and real paths in every log excerpt.**
+Before filing, check the [Known Limitations](README.md#known-limitations-and-deferred-work) and confirm the compatibility line (`dsh 0.1.5-rc.2`, Node `>=24.12 <25`). **Redact API keys and real paths in every log excerpt.**
 
 ## Response SLO
 

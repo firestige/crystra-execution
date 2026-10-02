@@ -12,8 +12,8 @@ body:
     id: dsh_version
     attributes:
       label: DSH version / DSH 版本
-      description: 目标兼容线为 `0.1.1-rc.2`
-      placeholder: "0.1.1-rc.2"
+      description: 目标兼容线为 `0.1.5-rc.2`
+      placeholder: "0.1.5-rc.2"
     validations:
       required: true
   - type: input

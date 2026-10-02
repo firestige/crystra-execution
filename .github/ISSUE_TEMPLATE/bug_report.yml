@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         ## 请先核对 / Before you file
-        - 版本兼容：确认 `dsh --version` 为 `0.1.1-rc.2`、Node 为 `>=24.12 <25`。
+        - 版本兼容：确认 `dsh --version` 为 `0.1.5-rc.2`、Node 为 `>=24.12 <25`。
         - 已读 [README](../blob/main/README.md) 的 Known Limitations（开发者预览，可能存在破坏兼容性变更）。
   - type: textarea
     id: environment
@@ -15,7 +15,7 @@ body:
       label: Environment / 环境
       description: DSH 版本、Node 版本、profile、平台 / DSH version, Node version, profile, platform
       placeholder: |
-        - dsh: 0.1.1-rc.2
+        - dsh: 0.1.5-rc.2
         - node: v24.12.0
         - profile: web
         - os: macOS / Linux / Windows

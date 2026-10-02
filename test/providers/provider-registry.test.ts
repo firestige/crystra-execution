@@ -29,7 +29,7 @@ function factory(
 describe("Agent Provider factory registry", () => {
   it("registers multiple exact factories and exposes stable canonical descriptors", () => {
     const registry = new AgentProviderFactoryRegistry([
-      factory("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
+      factory("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
       factory("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]),
     ]);
 
@@ -45,7 +45,7 @@ describe("Agent Provider factory registry", () => {
       {
         schemaVersion: "execution.agent-provider-factory@1.0.0",
         identity: "provider.dsh",
-        version: "0.1.1-rc.2",
+        version: "0.1.5-rc.2",
         adapterKey: "dsh-headless",
         capabilities: ["action-interaction", "structured-completion"],
         descriptorDigest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/u),
@@ -55,7 +55,7 @@ describe("Agent Provider factory registry", () => {
   });
 
   it("fails closed for duplicate, conflicting, malformed, mutable, or accessor-backed registrations", () => {
-    const dsh = factory("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["structured-completion"]);
+    const dsh = factory("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["structured-completion"]);
     const cases: readonly (() => unknown)[] = [
       () => new AgentProviderFactoryRegistry([dsh, dsh]),
       () => new AgentProviderFactoryRegistry([dsh, factory("provider.dsh", "0.1.2", "dsh-headless", ["structured-completion"])]),
@@ -74,12 +74,12 @@ describe("Agent Provider factory registry", () => {
 
   it("admits only an exact version with all required capabilities and never falls back", () => {
     const registry = new AgentProviderFactoryRegistry([
-      factory("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
+      factory("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["action-interaction", "structured-completion"]),
       factory("provider.codex", "0.144.5", "codex-cli", ["structured-completion"]),
     ]);
 
-    expect(registry.admit({ identity: "provider.dsh", version: "0.1.1-rc.2" }, ["structured-completion"]))
-      .toMatchObject({ identity: "provider.dsh", version: "0.1.1-rc.2", adapterKey: "dsh-headless" });
+    expect(registry.admit({ identity: "provider.dsh", version: "0.1.5-rc.2" }, ["structured-completion"]))
+      .toMatchObject({ identity: "provider.dsh", version: "0.1.5-rc.2", adapterKey: "dsh-headless" });
 
     for (const [provider, capabilities, code] of [
       [{ identity: "provider.missing", version: "1.0.0" }, ["structured-completion"], "PROVIDER_FACTORY_UNKNOWN"],
@@ -92,12 +92,12 @@ describe("Agent Provider factory registry", () => {
 
   it("rejects a persisted descriptor digest mismatch during recovery", () => {
     const registry = new AgentProviderFactoryRegistry([
-      factory("provider.dsh", "0.1.1-rc.2", "dsh-headless", ["structured-completion"]),
+      factory("provider.dsh", "0.1.5-rc.2", "dsh-headless", ["structured-completion"]),
     ]);
 
     expect(() => registry.recover({
       identity: "provider.dsh",
-      version: "0.1.1-rc.2",
+      version: "0.1.5-rc.2",
       descriptorDigest: sha("a"),
     })).toThrowError(expect.objectContaining({ code: "PROVIDER_FACTORY_DESCRIPTOR_MISMATCH" }));
   });

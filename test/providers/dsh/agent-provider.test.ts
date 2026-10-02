@@ -55,7 +55,7 @@ function dispatch(instructionsPath: string) {
 describe("DSH production Agent Provider", () => {
   it("registers DSH in the default production provider set without starting it", () => {
     const factories = createDefaultProductionAgentProviderFactories({ stateRoot: "/tmp/crystra", startupTimeoutMs: 1000, executionTimeoutMs: 1000, shutdownTimeoutMs: 1000 });
-    expect(new AgentProviderFactoryRegistry(factories).admit({ identity: "provider.dsh", version: "0.1.1-rc.2" }, ["structured-completion"])).toMatchObject({ adapterKey: "dsh-headless" });
+    expect(new AgentProviderFactoryRegistry(factories).admit({ identity: "provider.dsh", version: "0.1.5-rc.2" }, ["structured-completion"])).toMatchObject({ adapterKey: "dsh-headless" });
   });
   it.each([
     { stateDirectory: "relative" },
@@ -111,7 +111,7 @@ describe("DSH production Agent Provider", () => {
         turnTimeoutMs: source === "timeout" ? 30 : 5000,
         credentialRef: "EXACT_FACTORY_KEY", baseURL: `http://127.0.0.1:${address.port}`,
       });
-      const descriptor = new AgentProviderFactoryRegistry([factory]).admit({ identity: "provider.dsh", version: "0.1.1-rc.2" }, ["structured-completion"]);
+      const descriptor = new AgentProviderFactoryRegistry([factory]).admit({ identity: "provider.dsh", version: "0.1.5-rc.2" }, ["structured-completion"]);
       const realmRequest = {
         schemaVersion: "execution.agent-provider-delivery-realm-request@2.0.0" as const,
         deliveryId: "delivery-1", manifestBindingIdentity: `sha256:${"a".repeat(64)}`,

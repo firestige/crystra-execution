@@ -1,6 +1,8 @@
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
+export const DSH_RUNTIME_VERSION = "0.1.5-rc.2";
+
 interface ConstructorWithPrototype {
   readonly prototype: Record<string, unknown>;
 }
@@ -19,6 +21,7 @@ export interface DshPublicClosure {
   readonly version: string;
   readonly AgentRegistry: ConstructorWithPrototype;
   readonly SessionStore: ConstructorWithPrototype;
+  readonly SessionProjectionRegistry: ConstructorWithPrototype;
   readonly CredentialProvider: ConstructorWithPrototype;
   readonly LocalCredentialProvider: ConstructorWithPrototype;
   readonly createUserMessage: (...args: readonly unknown[]) => unknown;
@@ -53,8 +56,8 @@ export async function resolveDshPublicClosure(): Promise<DshPublicClosure> {
   const manifestPath = localRequire.resolve("@deepseek-ai/dsh/package.json");
   const dshRequire = createRequire(manifestPath);
   const manifest = dshRequire(manifestPath) as { version?: unknown };
-  if (manifest.version !== "0.1.1-rc.2") throw new TypeError("unsupported @deepseek-ai/dsh version");
-  const [agent, session, credentials, localCredentials, llm, tools, deepseek, cordis, systemPrompt, agentLoop, persistence] = await Promise.all([
+  if (manifest.version !== DSH_RUNTIME_VERSION) throw new TypeError("unsupported @deepseek-ai/dsh version");
+  const [agent, session, credentials, localCredentials, llm, tools, deepseek, cordis, systemPrompt, agentLoop, persistence, projections] = await Promise.all([
     publicModule(dshRequire, "@deepseek-ai/dsh-agent"),
     publicModule(dshRequire, "@deepseek-ai/dsh-session"),
     publicModule(dshRequire, "@deepseek-ai/dsh-credentials"),
@@ -66,6 +69,7 @@ export async function resolveDshPublicClosure(): Promise<DshPublicClosure> {
     publicModule(dshRequire, "@deepseek-ai/dsh-system-prompt"),
     publicModule(dshRequire, "@deepseek-ai/dsh-agent-loop"),
     publicModule(dshRequire, "@deepseek-ai/dsh-session-persistence-jsonl"),
+    publicModule(dshRequire, "@deepseek-ai/dsh-session-projection"),
   ]);
   const createUserMessage = llm.createUserMessage;
   if (typeof createUserMessage !== "function") throw new TypeError("DSH public closure is missing createUserMessage");
@@ -82,6 +86,7 @@ export async function resolveDshPublicClosure(): Promise<DshPublicClosure> {
     version: manifest.version,
     AgentRegistry: constructor(agent, "AgentRegistry"),
     SessionStore: constructor(session, "SessionStore"),
+    SessionProjectionRegistry: constructor(projections, "SessionProjectionRegistry"),
     CredentialProvider: constructor(credentials, "CredentialProvider"),
     LocalCredentialProvider: constructor(localCredentials, "LocalCredentialProvider"),
     createUserMessage: createUserMessage as (...args: readonly unknown[]) => unknown,
@@ -95,7 +100,7 @@ export async function resolveDshPublicClosure(): Promise<DshPublicClosure> {
     ToolRuntime: constructor(tools, "ToolRuntime") as DshPublicClosure["ToolRuntime"],
     SystemPrompt: constructor(systemPrompt, "SystemPrompt") as DshPublicClosure["SystemPrompt"],
     AgentLoop: constructor(agentLoop, "AgentLoop"),
-    JsonlSessionPersistence: constructor(persistence, "JsonlSessionPersistence"),
+    JsonlSessionPersistence: constructor(persistence, "default"),
     parseCredentialsDocument: localCredentials.parseCredentialsDocument as DshPublicClosure["parseCredentialsDocument"],
   });
 }

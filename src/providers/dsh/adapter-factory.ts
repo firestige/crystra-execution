@@ -76,6 +76,7 @@ export class DshProviderAdapterFactory implements ProviderAdapterFactory<"dsh-he
       await mount(context, closure.ToolRuntime, {});
       await mount(context, closure.AgentRegistry, {});
       await mount(context, closure.SessionStore, {});
+      await mount(context, closure.SessionProjectionRegistry, {});
       await mount(context, closure.JsonlSessionPersistence, {
         root: configuration.sessionStorageDirectory,
         compression: "none",
